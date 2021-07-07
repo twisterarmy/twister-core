@@ -23,9 +23,9 @@ not interoperate with existing networks (on purpose).
 
 Please follow the instructions for your platform:
 
-- [UNIX](https://github.com/miguelfreitas/twister-core/blob/master/doc/build-unix.md)
-- [Debian/Ubuntu](https://github.com/miguelfreitas/twister-core/blob/master/doc/building-on-ubuntu-debian.md)
-- [OS X](https://github.com/miguelfreitas/twister-core/blob/master/doc/build-osx.md)
+- [UNIX](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/build-unix.md)
+- [Debian/Ubuntu](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/building-on-ubuntu-debian.md)
+- [OS X](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/build-osx.md)
 - [Windows (untested)](https://github.com/miguelfreitas/twister-core/wiki/Compiling-for-Windows)
 
 > According to our tests, at least 1GB of RAM is needed to compile Twister.
