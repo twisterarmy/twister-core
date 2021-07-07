@@ -6,23 +6,26 @@ Tested on a pristine:
 ## Install
 
 1. sudo apt-get update
-1. sudo apt-get install git autoconf libtool build-essential libboost-all-dev libssl-dev libdb++-dev libminiupnpc-dev automake
-1. git clone https://github.com/miguelfreitas/twister-core.git
-1. cd twister-core
-1. ./autotool.sh
-1. ./configure (on ARM architectures, run: `./configure --with-boost-libdir=/usr/lib/arm-linux-gnueabihf --disable-sse2`)
-1. make
+2. sudo apt-get install git autoconf libtool build-essential libboost-all-dev libssl-dev libdb++-dev libminiupnpc-dev automake
+3. git clone https://github.com/twisterarmy/twister-core.git
+4. cd twister-core
+5. git checkout twisterarmy
+6. ./autotool.sh
+7. ./configure (on ARM architectures, run: `./configure --with-boost-libdir=/usr/lib/arm-linux-gnueabihf --disable-sse2`)
+8. make
 
 ## Configuration & web gui
 
 1. mkdir ~/.twister
-1. echo -e "rpcuser=user\nrpcpassword=pwd" > ~/.twister/twister.conf
-1. chmod 600 ~/.twister/twister.conf
-1. git clone https://github.com/miguelfreitas/twister-html.git ~/.twister/html
+2. echo -e "rpcuser=user\nrpcpassword=pwd" > ~/.twister/twister.conf
+3. chmod 600 ~/.twister/twister.conf
+4. git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html
+5. cd ~/.twister/html
+6. git checkout twisterarmy
 
 ## Start
 
 1. cd twister-core
-1. ./twisterd -rpcuser=user -rpcpassword=pwd -rpcallowip=127.0.0.1
-1. Open http://127.0.0.1:28332/index.html and use the user/pwd credentials
-1. Create your account !
+2. ./twisterd -rpcuser=user -rpcpassword=pwd -rpcallowip=127.0.0.1
+3. Open http://127.0.0.1:28332/index.html and use the user/pwd credentials
+4. Create your account !
