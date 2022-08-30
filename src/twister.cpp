@@ -1593,7 +1593,7 @@ bool acceptSignedPost(char const *data, int data_size, std::string username, int
                             std::string(postbuf.first,postbuf.second),
                             username, sig, height);
                     if( !ret ) {
-                        sprintf(errbuf,"bad post signature");
+                        sprintf(errbuf,"bad post signature: keep your node running and try again later.");
                     } else {
                         lazy_entry const* rt = post->dict_find_dict("rt");
                         std::string sig_rt = post->dict_find_string_value("sig_rt");
@@ -1608,7 +1608,7 @@ bool acceptSignedPost(char const *data, int data_size, std::string username, int
                                     std::string(rtbuf.first,rtbuf.second),
                                     username_rt, sig_rt, height_rt);
                             if( !ret ) {
-                                sprintf(errbuf,"bad RT signature");
+                                sprintf(errbuf,"bad RT signature: keep your node running and try again later.");
                             }
                         }
 
@@ -4476,5 +4476,3 @@ Value decodeshorturl(const Array& params, bool fHelp)
     }
     return peekpost(paramsSub,false);
 }
-
-
