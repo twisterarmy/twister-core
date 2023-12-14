@@ -428,6 +428,17 @@ AC_ARG_ENABLE(
   [[ARG_ENABLE_WS=$enableval]],
   [[ARG_ENABLE_WS=no]]
 )
+
+
+AC_ARG_ENABLE(
+  [ipv6],
+  [AS_HELP_STRING(
+    [--enable-ipv6],
+    [enable ipv6 [default=yes]])],
+  [[ARG_ENABLE_IPV6=$enableval]],
+  [[ARG_ENABLE_IPV6=yes]]
+)
+
 ###############################################################################
 # Checking configure options
 ###############################################################################
@@ -653,6 +664,20 @@ AS_CASE(["$ARG_ENABLE_WS"],
     AC_MSG_ERROR([Unknown option "$ARG_ENABLE_WS". Use either "yes" or "no".])]
 )
 
+AC_MSG_CHECKING([whether IPv6 should be enabled])
+AS_CASE(["$ARG_ENABLE_IPV6"],
+  ["yes"|"on"], [
+      AC_MSG_RESULT([yes])
+      AC_DEFINE([ENABLE_IPV6],[1],[Enable IPv6])
+      CXXFLAGS="$CXXFLAGS -DUSE_IPV6=1 "
+    ],
+  ["no"|"off"], [
+      AC_MSG_RESULT([no])
+    ],
+   [AC_MSG_RESULT([$ARG_ENABLE_IPV6])
+    AC_MSG_ERROR([Unknown option "$ARG_ENABLE_IPV6". Use either "yes" or "no".])]
+)
+
 AS_ECHO
 AS_ECHO "Checking for extra build files:"
 
@@ -772,6 +797,7 @@ AM_CONDITIONAL([WITH_OPENSSL], [test "x$ARG_ENABLE_ENCRYPTION" = "xyes" -o "x$AR
 AM_CONDITIONAL([USE_SSE2], [test "x$ARG_ENABLE_SSE2" = "xyes" -o "x$ARG_ENABLE_SSE2" = "xon" ])
 AM_CONDITIONAL([ENABLE_RSS], [test "x$ARG_ENABLE_RSS" = "xyes" -o "x$ARG_ENABLE_RSS" = "xon" ])
 AM_CONDITIONAL([ENABLE_WS], [test "x$ARG_ENABLE_WS" = "xyes" -o "x$ARG_ENABLE_WS" = "xon" ])
+AM_CONDITIONAL([ENABLE_IPV6], [test "x$ARG_ENABLE_IPV6" = "xyes" -o "x$ARG_ENABLE_IPV6" = "xon" ])
 
 ###############################################################################
 # Other useful stuff
@@ -876,6 +902,7 @@ Features:
   pool allocators:      ${ARG_ENABLE_POOL_ALLOC:-yes}
   rss feed:             ${ARG_ENABLE_RSS:-yes}
   websocket:            ${ARG_ENABLE_WS:-yes}
+  IPv6:                 ${ARG_ENABLE_IPv6:-yes}
 
 Extra builds:
   examples:             ${ARG_ENABLE_EXAMPLES:-no}
