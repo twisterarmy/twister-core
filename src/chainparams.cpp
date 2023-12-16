@@ -223,6 +223,7 @@ public:
         vSeeds.push_back(CDNSSeedData("cruller.tasty.sexy", "cruller.tasty.sexy"));
         vSeeds.push_back(CDNSSeedData("twister-seeder.muh.freedu.ms", "twister-seeder.muh.freedu.ms"));
         vSeeds.push_back(CDNSSeedData("twisterarmyseed.tk", "twisterarmyseed.tk"));
+        vSeeds.push_back(CDNSSeedData("twisterarmy.dedyn.io", "seed.twisterarmy.dedyn.io"));
 
         // Alfis DNS
         // https://github.com/Revertron/Alfis
