@@ -2,8 +2,8 @@
 
 <http://www.twister.net.co>
 
-Bitcoin Copyright (c) 2009 - 2013 Bitcoin Core developers  
-libtorrent Copyright (c) 2003 - 2007, Arvid Norberg  
+Bitcoin Copyright (c) 2009 - 2013 Bitcoin Core developers
+libtorrent Copyright (c) 2003 - 2007, Arvid Norberg
 twister Copyright (c) 2013 - 2018 Miguel Freitas
 
 ## What is twister?
@@ -25,6 +25,7 @@ Please follow the instructions for your platform:
 
 - [UNIX](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/build-unix.md)
 - [Debian/Ubuntu](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/building-on-ubuntu-debian.md)
+- [Fedora](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/building-on-fedora.md)
 - [OS X](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/build-osx.md)
 - [Windows (untested)](https://github.com/miguelfreitas/twister-core/wiki/Compiling-for-Windows)
 
@@ -197,4 +198,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 ## License
 
 See [COPYING](COPYING)
-
