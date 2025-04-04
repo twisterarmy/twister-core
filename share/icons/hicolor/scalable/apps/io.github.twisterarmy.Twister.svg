@@ -1,23 +1,80 @@
-<?xml version="1.0" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
- "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
-<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
- width="200.000000pt" height="200.000000pt" viewBox="0 0 200.000000 200.000000"
- preserveAspectRatio="xMidYMid meet">
-<metadata>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.0"
+   width="200.000000pt"
+   height="200.000000pt"
+   viewBox="0 0 200.000000 200.000000"
+   preserveAspectRatio="xMidYMid meet"
+   id="svg1"
+   sodipodi:docname="io.github.twisterarmy.Twister.svg"
+   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="pt"
+     inkscape:zoom="2.73375"
+     inkscape:cx="133.15043"
+     inkscape:cy="162.59717"
+     inkscape:window-width="1920"
+     inkscape:window-height="940"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <metadata
+     id="metadata1">
 Created by potrace 1.14, written by Peter Selinger 2001-2017;
 art conception by @theme_nin, @twisterarmy project (https://twisterarmy.github.io/)
 </metadata>
-<g transform="translate(0.000000,200.000000) scale(0.100000,-0.100000)"
-fill="#4A5466" stroke="none">
-<path d="M880 1994 c-188 -35 -299 -76 -427 -159 -211 -138 -362 -352 -426
--605 -30 -121 -30 -339 0 -460 94 -373 370 -649 743 -743 121 -30 339 -30 460
-0 373 94 649 370 743 743 30 121 30 339 0 460 -94 371 -372 650 -738 741 -77
-20 -297 34 -355 23z m580 -664 l0 -50 -430 0 -430 0 0 50 0 50 430 0 430 0 0
--50z m-120 -145 l0 -55 -310 0 -310 0 0 55 0 55 310 0 310 0 0 -55z m-170
--150 l0 -55 -260 0 -260 0 0 55 0 55 260 0 260 0 0 -55z m-50 -140 l0 -55
--150 0 -150 0 0 55 0 55 150 0 150 0 0 -55z m50 -150 l0 -55 -140 0 -140 0 0
-55 0 55 140 0 140 0 0 -55z m-80 -145 l0 -50 -55 0 -55 0 0 50 0 50 55 0 55 0
-0 -50z"/>
-</g>
+  <g
+     transform="translate(0.000000,200.000000) scale(0.100000,-0.100000)"
+     fill="#4A5466"
+     stroke="none"
+     id="g1">
+    <path
+       d="M880 1994 c-188 -35 -299 -76 -427 -159 -211 -138 -362 -352 -426 -605 -30 -121 -30 -339 0 -460 94 -373 370 -649 743 -743 121 -30 339 -30 460 0 373 94 649 370 743 743 30 121 30 339 0 460 -94 371 -372 650 -738 741 -77 20 -297 34 -355 23z m580 -664 l0 -50 -430 0 -430 0 0 50 0 50 430 0 430 0 0 -50z m-120 -145 l0 -55 -310 0 -310 0 0 55 0 55 310 0 310 0 0 -55z m-170 -150 l0 -55 -260 0 -260 0 0 55 0 55 260 0 260 0 0 -55z m-50 -140 l0 -55 -150 0 -150 0 0 55 0 55 150 0 150 0 0 -55z m50 -150 l0 -55 -140 0 -140 0 0 55 0 55 140 0 140 0 0 -55z m-80 -145 l0 -50 -55 0 -55 0 0 50 0 50 55 0 55 0 0 -50z"
+       id="path1" />
+  </g>
+  <path
+     style="fill:#ffffff;stroke-width:0.365798"
+     d="m 80.109739,89.254687 v -6.584362 h 57.247371 57.24737 v 6.584362 6.584362 H 137.35711 80.109739 Z"
+     id="path2"
+     transform="scale(0.75)" />
+  <path
+     style="fill:#ffffff;stroke-width:0.365798"
+     d="m 96.204847,108.64198 v -7.31596 h 41.152263 41.15226 v 7.31596 7.31595 H 137.35711 96.204847 Z"
+     id="path3"
+     transform="scale(0.75)" />
+  <path
+     style="fill:#ffffff;stroke-width:0.365798"
+     d="M 86.694102,128.57796 V 121.4449 H 121.262 155.8299 v 7.13306 7.13306 H 121.262 86.694102 Z"
+     id="path4"
+     transform="scale(0.75)" />
+  <path
+     style="fill:#ffffff;stroke-width:0.365798"
+     d="m 109.37357,147.23365 v -7.13306 h 19.93599 19.93598 v 7.13306 7.13306 h -19.93598 -19.93599 z"
+     id="path5"
+     transform="scale(0.75)" />
+  <path
+     style="fill:#ffffff;stroke-width:0.365798"
+     d="m 118.88432,167.35254 v -7.13306 h 18.47279 18.47279 v 7.13306 7.13306 h -18.47279 -18.47279 z"
+     id="path6"
+     transform="scale(0.75)" />
+  <path
+     style="fill:#ffffff;stroke-width:0.365798"
+     d="m 130.95565,186.73983 v -6.40147 h 7.13306 7.13305 v 6.40147 6.40146 h -7.13305 -7.13306 z"
+     id="path7"
+     transform="scale(0.75)" />
 </svg>
