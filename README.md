@@ -22,7 +22,7 @@ not interoperate with existing networks (on purpose).
 ## Compiling
 
 > [!NOTE]
-> See also the newest [Flatpak bundle](https://github.com/twisterarmy/twister)!
+> See also [Flatpak bundle](https://github.com/twisterarmy/twister)!
 
 Please follow the instructions for your platform:
 
