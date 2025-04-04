@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=twister
-Exec=/usr/bin/twister
+Exec=twister
 Type=Application
 Icon=io.github.twisterarmy.Twister
 Categories=Network;P2P;
