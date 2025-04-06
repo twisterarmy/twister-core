@@ -1,30 +1,30 @@
 # Ubuntu / Debian building instructions
 
 Tested on a pristine:
- - Ubuntu 20.04 amd64
- - Ubuntu 20.04 arm
+ - Ubuntu 20.04
+ - Debian 12
 
 ## Install
 
-1. sudo apt-get update
-2. sudo apt-get install git autoconf libtool build-essential libboost-all-dev libssl-dev libdb++-dev libminiupnpc-dev automake
-3. git clone https://github.com/twisterarmy/twister-core.git
-4. cd twister-core
-5. ./autotool.sh
-6. ./configure (on ARM architectures, run: `./configure --with-boost-libdir=/usr/lib/arm-linux-gnueabihf --disable-sse2`)
-7. make
+1. `sudo apt-get update`
+2. `sudo apt-get install git autoconf libtool build-essential libboost-all-dev libssl-dev libdb++-dev libminiupnpc-dev automake`
+3. `git clone https://github.com/twisterarmy/twister-core.git`
+4. `cd twister-core`
+5. `./autotool.sh`
+6. `./configure` (on ARM architectures, run: `./configure --with-boost-libdir=/usr/lib/arm-linux-gnueabihf --disable-sse2`)
+7. `make`
 
 ## Configuration & web gui
 
-1. mkdir ~/.twister
-2. echo -e "rpcuser=user\nrpcpassword=pwd" > ~/.twister/twister.conf
-3. chmod 600 ~/.twister/twister.conf
-4. git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html
-5. cd ~/.twister/html
+1. `mkdir ~/.twister`
+2. `echo -e "rpcuser=user\nrpcpassword=pwd" > ~/.twister/twister.conf`
+3. `chmod 600 ~/.twister/twister.conf`
+4. `git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html`
+5. `cd ~/.twister/html`
 
 ## Start
 
-1. cd twister-core
-2. ./twisterd -rpcuser=user -rpcpassword=pwd -rpcallowip=127.0.0.1
+1. `cd twister-core`
+2. `./twisterd -rpcuser=user -rpcpassword=pwd -rpcallowip=127.0.0.1`
 3. open http://user:pwd@127.0.0.1:28332/index.html
 4. create your account !
