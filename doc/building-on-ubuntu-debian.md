@@ -15,7 +15,7 @@ sudo apt install git autoconf libtool build-essential libboost-all-dev libssl-de
 ### twister-core
 
 1. `sudo useradd -m twister` - create new user with home directory
-2. `su twister` - login and navigate the home dir `~/` to continue
+2. `su twister` - login and navigate the home dir `/home/twister` to continue
 5. `git clone https://github.com/twisterarmy/twister-core.git`
 6. `cd twister-core`
 7. `./autotool.sh`
