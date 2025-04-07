@@ -6,15 +6,23 @@ Tested on a pristine:
 
 ## Install
 
-1. `sudo apt update`
-2. `sudo apt install git autoconf libtool build-essential libboost-all-dev libssl-dev libdb++-dev libminiupnpc-dev automake`
-3. `git clone https://github.com/twisterarmy/twister-core.git`
-4. `cd twister-core`
-5. `./autotool.sh`
-6. `./configure` (on ARM architectures, run: `./configure --with-boost-libdir=/usr/lib/arm-linux-gnueabihf --disable-sse2`)
-7. `make`
+### dependnencies 
 
-## Configuration & web gui
+``` bash
+sudo apt install git autoconf libtool build-essential libboost-all-dev libssl-dev libdb++-dev libminiupnpc-dev automake
+```
+
+### twister-core
+
+1. `sudo useradd -m twister` - create new user with its home directory
+2. `su twister` - login and navigate the home dir `~/` to continue
+5. `git clone https://github.com/twisterarmy/twister-core.git`
+6. `cd twister-core`
+7. `./autotool.sh`
+8. `./configure` (on ARM architectures, run: `./configure --with-boost-libdir=/usr/lib/arm-linux-gnueabihf --disable-sse2`)
+9. `make`
+
+## twister-html (web-ui)
 
 1. `mkdir ~/.twister`
 2. `echo -e "rpcuser=user\nrpcpassword=pwd\nrpcallowip=127.0.0.1" > ~/.twister/twister.conf`
@@ -22,7 +30,7 @@ Tested on a pristine:
 4. `git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html`
 5. `cd ~/.twister/html`
 
-## Start
+## start
 
 1. `cd twister-core`
 2. `./twisterd` (or `./twisterd -port=28333` - if you want to be reachable for [seeds](https://twisterarmy.github.io/network))
