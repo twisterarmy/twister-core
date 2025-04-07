@@ -17,7 +17,7 @@ Tested on a pristine:
 ## Configuration & web gui
 
 1. `mkdir ~/.twister`
-2. `echo -e "rpcuser=user\nrpcpassword=pwd" > ~/.twister/twister.conf`
+2. `echo -e "rpcuser=user\nrpcpassword=pwd\nrpcallowip=127.0.0.1" > ~/.twister/twister.conf`
 3. `chmod 600 ~/.twister/twister.conf`
 4. `git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html`
 5. `cd ~/.twister/html`
@@ -25,6 +25,6 @@ Tested on a pristine:
 ## Start
 
 1. `cd twister-core`
-2. `./twisterd -rpcuser=user -rpcpassword=pwd -rpcallowip=127.0.0.1`
-3. open http://user:pwd@127.0.0.1:28332/index.html
-4. create your account !
+2. `./twisterd` (or `./twisterd -port=28333` - if you want to be reachable for [seeds](https://twisterarmy.github.io/network))
+4. open http://user:pwd@127.0.0.1:28332/index.html
+5. create your account !
