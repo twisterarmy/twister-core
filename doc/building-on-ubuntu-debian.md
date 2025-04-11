@@ -23,9 +23,7 @@ sudo apt install git autoconf automake build-essential libtool\
     - `echo -e "rpcuser=user\nrpcpassword=pwd\nrpcallowip=127.0.0.1" > ~/.twister/twister.conf`
     - `chmod 600 ~/.twister/twister.conf`
     - `git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html`
-    - `cd ~/.twister/html`
 4. Launch twister
-    - `cd twister-core`
-    - `./twisterd` (or `./twisterd -port=28333` - if you want to be reachable for [seeds](https://twisterarmy.github.io/network))
+    - `./twisterd`
     - open http://user:pwd@127.0.0.1:28332
     - create your account!
