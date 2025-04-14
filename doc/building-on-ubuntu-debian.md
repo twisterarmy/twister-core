@@ -25,5 +25,5 @@ sudo apt install git autoconf automake build-essential libtool\
     - `git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html`
 4. Launch twister
     - `./twisterd`
-    - open http://user:pwd@127.0.0.1:28332
+    - open http://127.0.0.1:28332, enter `user` and `pwd` in the authorization dialog
     - create your account!
