@@ -229,6 +229,7 @@ public:
         // Alfis DNS
         // https://github.com/Revertron/Alfis
         vSeeds.push_back(CDNSSeedData("ta.conf", "seed.ta.conf"));
+        vSeeds.push_back(CDNSSeedData("twister.ygg", "seed.twister.ygg"));
 
         base58Prefixes[PUBKEY_ADDRESS] = 0;
         base58Prefixes[SCRIPT_ADDRESS] = 5;
