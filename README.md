@@ -20,7 +20,7 @@ Both Bitcoin and libtorrent versions included here are highly patched and do
 not interoperate with existing networks (on purpose).
 
 > [!TIP]
-> Visit our new [project Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/) for more details!
+> Visit our [Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/) for more details!
 
 ## Compiling
 
