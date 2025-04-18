@@ -8,9 +8,6 @@ twister Copyright (c) 2013 - 2018 Miguel Freitas
 
 ## What is twister?
 
-> [!NOTE]
-> Also, visit our new [project Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/) for more details!
-
 twister is an experimental peer-to-peer microblogging software.
 
 User registration and authentication is provided by a bitcoin-like network, so
@@ -21,6 +18,9 @@ are provided by libtorrent.
 
 Both Bitcoin and libtorrent versions included here are highly patched and do
 not interoperate with existing networks (on purpose).
+
+> [!TIP]
+> Visit our new [project Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/) for more details!
 
 ## Compiling
 
