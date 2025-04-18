@@ -9,7 +9,7 @@ twister Copyright (c) 2013 - 2018 Miguel Freitas
 ## What is twister?
 
 > [!NOTE]
-> Also, visit the new [project Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/) for more details!
+> Also, visit our new [project Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/) for more details!
 
 twister is an experimental peer-to-peer microblogging software.
 
