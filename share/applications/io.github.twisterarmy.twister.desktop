@@ -2,5 +2,5 @@
 Name=twister
 Exec=twister
 Type=Application
-Icon=io.github.twisterarmy.Twister
+Icon=io.github.twisterarmy.twister
 Categories=Network;P2P;
