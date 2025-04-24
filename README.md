@@ -8,19 +8,19 @@ twister Copyright (c) 2013 - 2018 Miguel Freitas
 
 ## What is twister?
 
-twister is an experimental peer-to-peer microblogging software.
+Twister is an experimental peer-to-peer micro-blogging software.
 
 User registration and authentication is provided by a bitcoin-like network, so
 it is completely decentralized (does not depend on any central authority).
 
-Post distribution uses kademlia DHT network and bittorrent-like swarms, both
+Post distribution uses the Kademlia DHT network and bittorrent-like swarms, both
 are provided by libtorrent.
 
 Both Bitcoin and libtorrent versions included here are highly patched and do
 not interoperate with existing networks (on purpose).
 
 > [!TIP]
-> Visit our [Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/) for more details!
+> For more details, like [requirements](https://github.com/twisterarmy/twister-core/wiki#requirements), visit our [Wiki](https://github.com/twisterarmy/twister-core/wiki) and [The twister P2P Book](https://twisterarmy.github.io/book/).
 
 ## Compiling
 
