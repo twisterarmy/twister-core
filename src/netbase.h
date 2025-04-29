@@ -23,6 +23,7 @@ enum Network
     NET_IPV4,
     NET_IPV6,
     NET_TOR,
+    NET_YGGDRASIL,
 
     NET_MAX,
 };
@@ -56,6 +57,7 @@ class CNetAddr
         bool IsRFC4862() const; // IPv6 autoconfig (FE80::/64)
         bool IsRFC6052() const; // IPv6 well-known prefix (64:FF9B::/96)
         bool IsRFC6145() const; // IPv6 IPv4-translated address (::FFFF:0:0:0/96)
+        bool IsYggdrasil() const; // IPv6 Yggdrasil (0200::/7)
         bool IsTor() const;
         bool IsLocal() const;
         bool IsRoutable() const;
