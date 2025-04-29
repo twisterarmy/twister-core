@@ -422,38 +422,54 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (mapArgs.count("-bind")) {
         // when specifying an explicit binding address, you want to listen on it
         // even when -connect or -proxy is specified
-        SoftSetBoolArg("-listen", true);
+        if (SoftSetBoolArg("-listen", true))
+            InitWarning("parameter interaction: -bind set -> setting -listen=1");
     }
 
     if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
-        SoftSetBoolArg("-dnsseed", false);
-        SoftSetBoolArg("-listen", false);
+        if (SoftSetBoolArg("-dnsseed", false))
+            InitWarning("parameter interaction: -connect set -> setting -dnsseed=0");
+        if (SoftSetBoolArg("-listen", false))
+            InitWarning("parameter interaction: -connect set -> setting -listen=0");
     }
 
     if (mapArgs.count("-proxy")) {
         // to protect privacy, do not listen by default if a proxy server is specified
-        SoftSetBoolArg("-listen", false);
+        if (SoftSetBoolArg("-listen", false))
+            InitWarning("parameter interaction: -proxy set -> setting -listen=0");
     }
 
-    if (mapArgs.count("-proxy") || mapArgs.count("-tor")) {
-        SoftSetBoolArg("-dhtproxy", true);
+    bool optHasProxy = mapArgs.count("-proxy") > 0;
+    bool optHasTor = mapArgs.count("-tor") > 0;
+
+    if (optHasProxy || optHasTor) {
+        if (SoftSetBoolArg("-dhtproxy", true)) {
+            if (optHasProxy)
+                InitWarning("parameter interaction: -proxy set -> setting -dhtproxy=1");
+            if (optHasTor)
+                InitWarning("parameter interaction: -tor set -> setting -dhtproxy=1");
+        }
     }
 
     if (!GetBoolArg("-listen", true)) {
         // do not map ports or try to retrieve public IP when not listening (pointless)
-        SoftSetBoolArg("-upnp", false);
-        SoftSetBoolArg("-discover", false);
+        if (SoftSetBoolArg("-upnp", false))
+            InitWarning("parameter interaction: -listen=1 -> setting -upnp=0");
+        if (SoftSetBoolArg("-discover", false))
+            InitWarning("parameter interaction: -listen=1 -> setting -discover=0");
     }
 
     if (mapArgs.count("-externalip")) {
         // if an explicit public IP is specified, do not try to find others
-        SoftSetBoolArg("-discover", false);
+        if (SoftSetBoolArg("-discover", false))
+            InitWarning("parameter interaction: -externalip set -> setting -discover=0");
     }
 
     if (GetBoolArg("-salvagewallet", false)) {
         // Rewrite just private keys: rescan to find transactions
-        SoftSetBoolArg("-rescan", true);
+        if (SoftSetBoolArg("-rescan", true))
+            InitWarning("parameter interaction: -salvagewallet=0 set -> setting -rescan=1");
     }
 
     // Make sure enough file descriptors are available
@@ -494,6 +510,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     /* force fServer when running without GUI */
     if (!fHaveGUI)
         fServer = true;
+
     fPrintToConsole = GetBoolArg("-printtoconsole", false);
     fPrintToDebugger = GetBoolArg("-printtodebugger", false);
     fLogTimestamps = GetBoolArg("-logtimestamps", false);
@@ -525,7 +542,6 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     printf("Twister version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (!fLogTimestamps)
@@ -1018,4 +1034,3 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     return !fRequestShutdown;
 }
-
