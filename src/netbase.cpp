@@ -62,6 +62,13 @@ void SplitHostPort(std::string in, int &portOut, std::string &hostOut) {
         hostOut = in;
 }
 
+bool IsBindValid(std::string &value) {
+    int port = -1;
+    std::string host = "";
+    SplitHostPort(value, port, host);
+    return port == -1;
+}
+
 bool static LookupIntern(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions, bool fAllowLookup)
 {
     vIP.clear();
