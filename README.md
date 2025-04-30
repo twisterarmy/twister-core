@@ -199,7 +199,7 @@ But be careful, it is in beta stage.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md)
+Check out the latest [Contribution](https://github.com/twisterarmy/twister-core/wiki/Contribution) wiki or precompiled [The twister P2P Book](https://twisterarmy.github.io/book/twister-core/contribute.html)!
 
 ## License
 

@@ -1,5 +1,9 @@
 # How to contribute
 
+Check out the latest [Contribution](https://github.com/twisterarmy/twister-core/wiki/Contribution) wiki or precompiled [The twister P2P Book](https://twisterarmy.github.io/book/twister-core/contribute.html)!
+
+## Legacy twister-core
+
 Contributors communicate through various channels:
 
 - GitHub: [miguelfreitas/twister-core](https://github.com/miguelfreitas/twister-core/issues/)
