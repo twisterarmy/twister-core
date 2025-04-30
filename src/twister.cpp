@@ -331,6 +331,8 @@ void ThreadWaitExtIP()
     if (mapArgs.count("-bind")) { // respect bind address and family for DHT services (#254)
         BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
             CService addrBind;
+            // the binding address should be valid at this point, as checked in the `init.cpp` step,
+            // just let's ensure this by adding an additional `Lookup` validation
             if (Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
                 bind_to_interface = strBind.c_str();
             else
