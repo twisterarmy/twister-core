@@ -16,6 +16,8 @@ BOOST_AUTO_TEST_CASE(netbase_networks)
     BOOST_CHECK(CNetAddr("8.8.8.8").GetNetwork()                                == NET_IPV4);
     BOOST_CHECK(CNetAddr("2001::8888").GetNetwork()                             == NET_IPV6);
     BOOST_CHECK(CNetAddr("FD87:D87E:EB43:edb1:8e4:3588:e546:35ca").GetNetwork() == NET_TOR);
+    BOOST_CHECK(CNetAddr("300:17a8:aabf:108f::33").GetNetwork()                 == NET_YGGDRASIL);
+    BOOST_CHECK(CNetAddr("200:17a8:aabf:108f:5581:3d0d:c2a:4f06").GetNetwork()  == NET_YGGDRASIL);
 }
 
 BOOST_AUTO_TEST_CASE(netbase_properties)
@@ -35,6 +37,8 @@ BOOST_AUTO_TEST_CASE(netbase_properties)
     BOOST_CHECK(CNetAddr("FE80::").IsRFC4862());
     BOOST_CHECK(CNetAddr("64:FF9B::").IsRFC6052());
     BOOST_CHECK(CNetAddr("FD87:D87E:EB43:edb1:8e4:3588:e546:35ca").IsTor());
+    BOOST_CHECK(CNetAddr("300:17a8:aabf:108f::33").IsYggdrasil());
+    BOOST_CHECK(CNetAddr("200:17a8:aabf:108f:5581:3d0d:c2a:4f06").IsYggdrasil());
     BOOST_CHECK(CNetAddr("127.0.0.1").IsLocal());
     BOOST_CHECK(CNetAddr("::1").IsLocal());
     BOOST_CHECK(CNetAddr("8.8.8.8").IsRoutable());

@@ -38,6 +38,7 @@ enum Network ParseNetwork(std::string net) {
     if (net == "ipv4") return NET_IPV4;
     if (net == "ipv6") return NET_IPV6;
     if (net == "tor")  return NET_TOR;
+    if (net == "ygg" || net == "yggdrasil") return NET_YGGDRASIL;
     return NET_UNROUTABLE;
 }
 
@@ -687,6 +688,12 @@ bool CNetAddr::IsTor() const
     return (memcmp(ip, pchOnionCat, sizeof(pchOnionCat)) == 0);
 }
 
+// https://yggdrasil-network.github.io/2018/07/28/addressing.html#addressing-in-yggdrasil
+bool CNetAddr::IsYggdrasil() const
+{
+    return IsIPv6() && (ip[0] & 0xFE) == 0x02; // @TODO wants revision
+}
+
 bool CNetAddr::IsLocal() const
 {
     // IPv4 loopback
@@ -758,6 +765,9 @@ enum Network CNetAddr::GetNetwork() const
 
     if (IsTor())
         return NET_TOR;
+
+    if (IsYggdrasil())
+        return NET_YGGDRASIL;
 
     return NET_IPV6;
 }
@@ -873,6 +883,11 @@ std::vector<unsigned char> CNetAddr::GetGroup() const
         nStartByte = 6;
         nBits = 4;
     }
+    // for yggdrasil, use /7 groups
+    else if (IsYggdrasil())
+    {
+        nClass = NET_YGGDRASIL;
+    }
     // for he.net, use /36 groups
     else if (GetByte(15) == 0x20 && GetByte(14) == 0x11 && GetByte(13) == 0x04 && GetByte(12) == 0x70)
         nBits = 36;
@@ -972,6 +987,11 @@ int CNetAddr::GetReachabilityFrom(const CNetAddr *paddrPartner) const
         default:         return REACH_DEFAULT;
         case NET_IPV4:   return REACH_IPV4; // Tor users can connect to IPv4 as well
         case NET_TOR:    return REACH_PRIVATE;
+        }
+    case NET_YGGDRASIL: // by NET_CJDNS https://github.com/bitcoin/bitcoin/blob/master/src/netaddress.cpp#L760
+        switch(ourNet) {
+        case NET_YGGDRASIL: return REACH_PRIVATE;
+        default:            return REACH_DEFAULT;
         }
     case NET_TEREDO:
         switch(ourNet) {
@@ -1112,7 +1132,7 @@ bool CService::GetSockAddr(struct sockaddr* paddr, socklen_t *addrlen) const
         return true;
     }
 #ifdef USE_IPV6
-    if (IsIPv6()) {
+    if (IsIPv6() || IsYggdrasil()) {
         if (*addrlen < (socklen_t)sizeof(struct sockaddr_in6))
             return false;
         *addrlen = sizeof(struct sockaddr_in6);
