@@ -679,7 +679,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         if (mapArgs.count("-bind")) {
             BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
                 if (!IsBindValid(strBind))
-                    return InitError(strprintf(_("The -bind address '%s' value is invalid!"), strBind.c_str()));
+                    return InitError(strprintf(_("The -bind address format '%s' is invalid!"), strBind.c_str()));
 
                 CService addrBind;
                 if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
