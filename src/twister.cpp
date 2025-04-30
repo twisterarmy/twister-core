@@ -328,6 +328,17 @@ void ThreadWaitExtIP()
 
     int listen_port = GetListenPort() + LIBTORRENT_PORT_OFFSET;
     std::string bind_to_interface = "";
+    if (mapArgs.count("-bind")) { // respect bind address and family for DHT services (#254)
+        BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
+            CService addrBind;
+            if (Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
+                bind_to_interface = strBind.c_str();
+            else
+                printf("Cannot resolve -bind address: '%s'", strBind.c_str());
+            break; // we are using only the first value (if there are multiple `-bind` options),
+                   // the application behavior may require a separate option for these needs @TODO
+        }
+    }
     proxyType proxyInfoOut;
     m_usingProxy = GetProxy(NET_IPV4, proxyInfoOut);
 
