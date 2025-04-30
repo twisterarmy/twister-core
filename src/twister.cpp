@@ -336,7 +336,7 @@ void ThreadWaitExtIP()
             if (Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
                 bind_to_interface = strBind.c_str();
             else
-                printf("Cannot resolve -bind address: '%s'", strBind.c_str());
+                printf("Cannot resolve -bind address: '%s', using default interface.", strBind.c_str());
             break; // we are using only the first value (if there are multiple `-bind` options),
                    // the application behavior may require a separate option for these needs @TODO
         }
