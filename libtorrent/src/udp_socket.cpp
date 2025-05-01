@@ -145,7 +145,7 @@ void udp_socket::send_hostname(char const* hostname, int port
 	{
 		// send udp packets through SOCKS5 server
 		wrap(hostname, port, p, len, ec);
-		return;	
+		return;
 	}
 	else if (m_force_proxy)
 	{
@@ -190,7 +190,7 @@ void udp_socket::send(udp::endpoint const& ep, char const* p, int len
 		{
 			// send udp packets through SOCKS5 server
 			wrap(ep, p, len, ec);
-			return;	
+			return;
 		}
 
 		if (m_queue_packets)
@@ -711,6 +711,8 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
 		m_ipv6_sock.set_option(v6only(true), ec);
 		if (ec) return;
 #endif
+		m_ipv6_sock.open(udp::v6(), ec);
+		if (ec) return;
 		m_ipv6_sock.bind(ep, ec);
 		if (ec) return;
 		m_ipv6_sock.non_blocking(true, ec);
@@ -732,7 +734,7 @@ void udp_socket::set_proxy_settings(proxy_settings const& ps)
 	error_code ec;
 	m_socks5_sock.close(ec);
 	m_tunnel_packets = false;
-	
+
 	m_proxy_settings = ps;
 
 	if (m_abort) return;
@@ -786,7 +788,7 @@ void udp_socket::on_name_lookup(error_code const& e, tcp::resolver::iterator i)
 	m_proxy_addr.address(i->endpoint().address());
 	m_proxy_addr.port(i->endpoint().port());
 	// on_connect may be called from within this thread
-	// the semantics for on_connect and on_timeout is 
+	// the semantics for on_connect and on_timeout is
 	// a bit complicated. See comments in connection_queue.hpp
 	// for more details. This semantic determines how and
 	// when m_outstanding_ops may be decremented
@@ -1295,7 +1297,7 @@ void udp_socket::connect2(error_code const& e)
 		drain_queue();
 		return;
 	}
-	
+
 	m_tunnel_packets = true;
 	drain_queue();
 
@@ -1389,4 +1391,3 @@ bool rate_limited_udp_socket::send(udp::endpoint const& ep, char const* p
 	udp_socket::send(ep, p, len, ec, flags);
 	return true;
 }
-
