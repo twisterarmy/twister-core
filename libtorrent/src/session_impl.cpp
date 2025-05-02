@@ -47,10 +47,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/limits.hpp>
 #include <boost/bind.hpp>
 #include <boost/function_equal.hpp>
-#if TORRENT_USE_IPV6
 #ifdef IPV6_V6ONLY
 #include <boost/asio/ip/v6_only.hpp>
-#endif
 #endif
 
 #ifdef _MSC_VER
