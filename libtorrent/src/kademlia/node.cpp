@@ -265,8 +265,8 @@ void node_impl::incoming(msg const& m)
 			entry e;
 			incoming_request(m, e);
 			printf(
-				m_sock->send_packet(e, m.addr, 0) ? "[%s:%d] response to incoming request sent.\n"
-												  : "[%s:%d] response to incoming request has failed!\n",
+				m_sock->send_packet(e, m.addr, 0) ? "[DHT] [%s:%d] response to incoming request sent.\n"
+												  : "[DHT] [%s:%d] response to incoming request has failed!\n",
 				m.addr.address().to_string().c_str(),
 				m.addr.port()
 			);
@@ -285,7 +285,7 @@ void node_impl::incoming(msg const& m)
 			if (err && err->list_size() >= 2)
 			{
 				printf(
-					"[%s:%d] incoming request error: `%s`\n",
+					"[DHT] [%s:%d] incoming request error: `%s`\n",
 					m.addr.address().to_string().c_str(),
 					m.addr.port(),
 					err->list_string_value_at(1).c_str()
