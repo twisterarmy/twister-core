@@ -264,9 +264,9 @@ void node_impl::incoming(msg const& m)
 			TORRENT_ASSERT(m.message.dict_find_string_value("z") == "q");
 			entry e;
 			incoming_request(m, e);
-			m_sock->send_packet(e, m.addr, 0);
 			printf(
-				"[%s:%d] incoming request replied.\n",
+				m_sock->send_packet(e, m.addr, 0) ? "[%s:%d] response to incoming request sent.\n"
+												  : "[%s:%d] response to incoming request has failed!\n",
 				m.addr.address().to_string().c_str(),
 				m.addr.port()
 			);
@@ -285,7 +285,7 @@ void node_impl::incoming(msg const& m)
 			if (err && err->list_size() >= 2)
 			{
 				printf(
-					"[%s:%d] incoming request failed: `%s`\n",
+					"[%s:%d] incoming request error: `%s`\n",
 					m.addr.address().to_string().c_str(),
 					m.addr.port(),
 					err->list_string_value_at(1).c_str()
