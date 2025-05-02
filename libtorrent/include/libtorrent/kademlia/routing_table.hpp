@@ -56,14 +56,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <list>
 
+#include <libtorrent/assert.hpp>
+#include <libtorrent/aux_/vector.hpp>
 #include <libtorrent/kademlia/logging.hpp>
-
-#include <libtorrent/kademlia/node_id.hpp>
 #include <libtorrent/kademlia/node_entry.hpp>
+#include <libtorrent/kademlia/node_id.hpp>
+#include <libtorrent/ptime.hpp>
 #include <libtorrent/session_settings.hpp>
 #include <libtorrent/size_type.hpp>
-#include <libtorrent/assert.hpp>
-#include <libtorrent/ptime.hpp>
 
 namespace libtorrent
 {
@@ -78,13 +78,13 @@ TORRENT_DECLARE_LOG(table);
 #endif
 
 
-typedef std::vector<node_entry> bucket_t;
+using bucket_t = aux::vector<node_entry>;
 
 struct routing_table_node
 {
 	bucket_t replacements;
 	bucket_t live_nodes;
-	ptime last_active; // @TODO deprecated
+	ptime last_active; // @TODO deprecated!
 };
 
 struct ipv4_hash
@@ -204,7 +204,7 @@ public:
 	int bucket_size() const { return m_bucket_size; }
 
 	boost::tuple<int, int> size() const;
-	size_type num_global_nodes() const;
+	std::int64_t num_global_nodes() const;
 
 	// returns true if there are no working nodes
 	// in the routing table
