@@ -40,6 +40,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
+#if TORRENT_USE_IPV6
+#ifdef IPV6_V6ONLY
+#include <boost/asio/ip/v6_only.hpp>
+#endif
+#endif
 #if BOOST_VERSION < 103500
 #include <asio/read.hpp>
 #else
@@ -708,7 +713,7 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
 	else
 	{
 #ifdef IPV6_V6ONLY
-		m_ipv6_sock.set_option(v6only(true), ec);
+		m_ipv6_sock.set_option(boost::asio::ip::v6_only(true), ec);
 		if (ec) return;
 #endif
 		m_ipv6_sock.open(udp::v6(), ec);
