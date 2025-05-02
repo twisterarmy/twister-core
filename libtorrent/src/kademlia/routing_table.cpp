@@ -1,6 +1,7 @@
 /*
 
 Copyright (c) 2006-2012, Arvid Norberg
+Copyright (c) 2025, the twisterarmy developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -206,7 +207,7 @@ void routing_table::print_state(std::ostream& os) const
 		const int mask_shift = 5;
 		bool sub_buckets[8];
 		memset(sub_buckets, 0, sizeof(sub_buckets));
-		
+
 		for (bucket_t::const_iterator j = i->live_nodes.begin()
 			, end(i->live_nodes.end()); j != end; ++j)
 		{
@@ -448,7 +449,7 @@ bool routing_table::add_node(node_entry e)
 			m_ips.erase(e.addr().to_v4().to_bytes());
 		}
 	}
-	
+
 	table_t::iterator i = find_bucket(e.id);
 	bucket_t& b = i->live_nodes;
 	bucket_t& rb = i->replacements;
@@ -763,7 +764,7 @@ void routing_table::node_failed(node_id const& id, udp::endpoint const& ep)
 	// claiming the same ID. The node we have in our routing
 	// table is not necessarily stale
 	if (j->ep() != ep) return;
-	
+
 	if (rb.empty())
 	{
 		j->timed_out();
@@ -904,7 +905,7 @@ void routing_table::find_node(node_id const& target
 	{
 		--j;
 		bucket_t& b = j->live_nodes;
-	
+
 		if (options & include_failed)
 		{
 			std::copy(b.begin(), b.end(), std::back_inserter(l));
@@ -938,4 +939,3 @@ void routing_table::find_node(node_id const& target
 }
 
 } } // namespace libtorrent::dht
-

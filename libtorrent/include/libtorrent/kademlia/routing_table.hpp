@@ -1,6 +1,7 @@
 /*
 
 Copyright (c) 2006-2012, Arvid Norberg
+Copyright (c) 2025, the twisterarmy developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -69,7 +70,7 @@ namespace libtorrent { namespace dht
 TORRENT_DECLARE_LOG(table);
 #endif
 
-	
+
 typedef std::vector<node_entry> bucket_t;
 
 struct routing_table_node
@@ -98,7 +99,7 @@ public:
 	void status(session_status& s) const;
 
 	void node_failed(node_id const& id, udp::endpoint const& ep);
-	
+
 	// adds an endpoint that will never be added to
 	// the routing table
 	void add_router_node(udp::endpoint router);
@@ -120,10 +121,10 @@ public:
 	// not pinged. If the bucket the node falls into is full,
 	// the node will be ignored.
 	void heard_about(node_id const& id, udp::endpoint const& ep);
-	
+
 	// if any bucket in the routing table needs to be refreshed
 	// this function will return true and set the target to an
-	// appropriate target inside that bucket	
+	// appropriate target inside that bucket
 	bool need_refresh(node_id& target) const;
 
 	enum
@@ -134,7 +135,7 @@ public:
 	// are nearest to the given id.
 	void find_node(node_id const& id, std::vector<node_entry>& l
 		, int options, int count = 0);
-	
+
 	int bucket_size(int bucket) const
 	{
 		int num_buckets = m_buckets.size();
@@ -152,12 +153,12 @@ public:
 
 	boost::tuple<int, int> size() const;
 	size_type num_global_nodes() const;
-	
+
 	// returns true if there are no working nodes
 	// in the routing table
 	bool need_bootstrap() const;
 	int num_active_buckets() const { return m_buckets.size(); }
-	
+
 	void replacement_cache(bucket_t& nodes) const;
 
 #if defined TORRENT_DHT_VERBOSE_LOGGING || defined TORRENT_DEBUG
@@ -185,7 +186,7 @@ private:
 
 	// constant called k in paper
 	int m_bucket_size;
-	
+
 	dht_settings const& m_settings;
 
 	// (k-bucket, replacement cache) pairs
@@ -209,7 +210,7 @@ private:
 	// the last time we refreshed our own bucket
 	// refreshed every 15 minutes
 	mutable ptime m_last_self_refresh;
-	
+
 	// this is a set of all the endpoints that have
 	// been identified as router nodes. They will
 	// be used in searches, but they will never
