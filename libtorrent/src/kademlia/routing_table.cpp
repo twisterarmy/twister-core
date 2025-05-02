@@ -1,6 +1,12 @@
 /*
 
-Copyright (c) 2006-2012, Arvid Norberg
+Copyright (c) 2006-2020, Arvid Norberg
+Copyright (c) 2015-2016, 2018, Steven Siloti
+Copyright (c) 2015, Thomas Yuan
+Copyright (c) 2016-2018, Alden Torres
+Copyright (c) 2016, Andrei Kurushin
+Copyright (c) 2016, Angel Leon
+Copyright (c) 2016, Pavel Pimenov
 Copyright (c) 2025, the twisterarmy developers
 All rights reserved.
 
@@ -50,12 +56,53 @@ POSSIBILITY OF SUCH DAMAGE.
 
 using boost::uint8_t;
 
+using namespace std::placeholders;
+
 namespace libtorrent { namespace dht
 {
 
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
 TORRENT_DEFINE_LOG(table)
 #endif
+
+// IP set implementation
+
+namespace {
+
+	template <typename T, typename K>
+	void erase_one(T& container, K const& key)
+	{
+		auto const i = container.find(key);
+		TORRENT_ASSERT(i != container.end());
+		container.erase(i);
+	}
+}
+
+void ip_set::insert(address const& addr)
+{
+	if (addr.is_v6())
+		m_ip6s.insert(addr.to_v6().to_bytes());
+	else
+		m_ip4s.insert(addr.to_v4().to_bytes());
+}
+
+bool ip_set::exists(address const& addr) const
+{
+	if (addr.is_v6())
+		return m_ip6s.find(addr.to_v6().to_bytes()) != m_ip6s.end();
+	else
+		return m_ip4s.find(addr.to_v4().to_bytes()) != m_ip4s.end();
+}
+
+void ip_set::erase(address const& addr)
+{
+	if (addr.is_v6())
+		erase_one(m_ip6s, addr.to_v6().to_bytes());
+	else
+		erase_one(m_ip4s, addr.to_v4().to_bytes());
+}
+
+// Routing table implementation
 
 routing_table::routing_table(node_id const& id, int bucket_size
 	, dht_settings const& settings)
@@ -373,7 +420,7 @@ bool routing_table::add_node(node_entry e)
 	if (e.id == m_id) return ret;
 
 	// do we already have this IP in the table?
-	if (m_ips.find(e.addr().to_v4().to_bytes()) != m_ips.end())
+	if (m_ips.exists(e.addr()))
 	{
 		// this exact IP already exists in the table. It might be the case
 		// that the node changed IP. If pinged is true, and the port also
@@ -446,7 +493,7 @@ bool routing_table::add_node(node_entry e)
 				}
 			}
 			TORRENT_ASSERT(done);
-			m_ips.erase(e.addr().to_v4().to_bytes());
+			m_ips.erase(e.addr());
 		}
 	}
 
@@ -460,7 +507,7 @@ bool routing_table::add_node(node_entry e)
 
 	// if the node already exists, we don't need it
 	j = std::find_if(b.begin(), b.end()
-		, boost::bind(&node_entry::id, _1) == e.id);
+		, boost::bind(&node_entry::id, boost::placeholders::_1) == e.id);
 
 	if (j != b.end())
 	{
@@ -480,7 +527,7 @@ bool routing_table::add_node(node_entry e)
 	// pull it out from there. We may add it back to the replacement
 	// bucket, but we may also replace a node in the main bucket, now
 	// that we have an updated RTT
-	j = std::find_if(rb.begin(), rb.end(), boost::bind(&node_entry::id, _1) == e.id);
+	j = std::find_if(rb.begin(), rb.end(), boost::bind(&node_entry::id, boost::placeholders::_1) == e.id);
 	if (j != rb.end())
 	{
 		// a new IP address just claimed this node-ID
@@ -490,14 +537,14 @@ bool routing_table::add_node(node_entry e)
 		j->timeout_count = 0;
 		j->update_rtt(e.rtt);
 		e = *j;
-		m_ips.erase(j->addr().to_v4().to_bytes());
+		m_ips.erase(j->addr());
 		rb.erase(j);
 	}
 
 	if (m_settings.restrict_routing_ips)
 	{
 		// don't allow multiple entries from IPs very close to each other
-		j = std::find_if(b.begin(), b.end(), boost::bind(&compare_ip_cidr, _1, e));
+		j = std::find_if(b.begin(), b.end(), boost::bind(&compare_ip_cidr, boost::placeholders::_1, e));
 		if (j != b.end())
 		{
 			// we already have a node in this bucket with an IP very
@@ -511,7 +558,7 @@ bool routing_table::add_node(node_entry e)
 			return ret;
 		}
 
-		j = std::find_if(rb.begin(), rb.end(), boost::bind(&compare_ip_cidr, _1, e));
+		j = std::find_if(rb.begin(), rb.end(), boost::bind(&compare_ip_cidr, boost::placeholders::_1, e));
 		if (j != rb.end())
 		{
 			// same thing but for the replacement bucket
@@ -529,7 +576,7 @@ bool routing_table::add_node(node_entry e)
 	{
 		if (b.empty()) b.reserve(bucket_size_limit);
 		b.push_back(e);
-		m_ips.insert(e.addr().to_v4().to_bytes());
+		m_ips.insert(e.addr());
 //		TORRENT_LOG(table) << "inserting node: " << e.id << " " << e.addr();
 		return ret;
 	}
@@ -554,15 +601,15 @@ bool routing_table::add_node(node_entry e)
 		// if the node we're trying to insert is considered pinged,
 		// we may replace other nodes that aren't pinged
 
-		j = std::find_if(b.begin(), b.end(), boost::bind(&node_entry::pinged, _1) == false);
+		j = std::find_if(b.begin(), b.end(), boost::bind(&node_entry::pinged, boost::placeholders::_1) == false);
 
 		if (j != b.end() && !j->pinged())
 		{
 			// j points to a node that has not been pinged.
 			// Replace it with this new one
-			m_ips.erase(j->addr().to_v4().to_bytes());
+			m_ips.erase(j->addr());
 			*j = e;
-			m_ips.insert(e.addr().to_v4().to_bytes());
+			m_ips.insert(e.addr());
 //			TORRENT_LOG(table) << "replacing unpinged node: " << e.id << " " << e.addr();
 			return ret;
 		}
@@ -574,16 +621,16 @@ bool routing_table::add_node(node_entry e)
 		// with nodes from that cache.
 
 		j = std::max_element(b.begin(), b.end()
-			, boost::bind(&node_entry::fail_count, _1)
-			< boost::bind(&node_entry::fail_count, _2));
+			, boost::bind(&node_entry::fail_count, boost::placeholders::_1)
+			< boost::bind(&node_entry::fail_count, boost::placeholders::_2));
 
 		if (j != b.end() && j->fail_count() > 0)
 		{
 			// i points to a node that has been marked
 			// as stale. Replace it with this new one
-			m_ips.erase(j->addr().to_v4().to_bytes());
+			m_ips.erase(j->addr());
 			*j = e;
-			m_ips.insert(e.addr().to_v4().to_bytes());
+			m_ips.insert(e.addr());
 //			TORRENT_LOG(table) << "replacing stale node: " << e.id << " " << e.addr();
 			return ret;
 		}
@@ -591,14 +638,14 @@ bool routing_table::add_node(node_entry e)
 		// in order to keep lookup times small, prefer nodes with low RTTs
 
 		j = std::max_element(b.begin(), b.end()
-			, boost::bind(&node_entry::rtt, _1)
-			< boost::bind(&node_entry::rtt, _2));
+			, boost::bind(&node_entry::rtt, boost::placeholders::_1)
+			< boost::bind(&node_entry::rtt, boost::placeholders::_2));
 
 		if (j != b.end() && j->rtt > e.rtt)
 		{
-			m_ips.erase(j->addr().to_v4().to_bytes());
+			m_ips.erase(j->addr());
 			*j = e;
-			m_ips.insert(e.addr().to_v4().to_bytes());
+			m_ips.insert(e.addr());
 //			TORRENT_LOG(table) << "replacing node with higher RTT: " << e.id << " " << e.addr();
 			return ret;
 		}
@@ -614,7 +661,7 @@ bool routing_table::add_node(node_entry e)
 		// and then replace it.
 
 		j = std::find_if(rb.begin(), rb.end()
-			, boost::bind(&node_entry::id, _1) == e.id);
+			, boost::bind(&node_entry::id, boost::placeholders::_1) == e.id);
 
 		// if the node is already in the replacement bucket
 		// just return.
@@ -631,15 +678,15 @@ bool routing_table::add_node(node_entry e)
 			// if the replacement bucket is full, remove the oldest entry
 			// but prefer nodes that haven't been pinged, since they are
 			// less reliable than this one, that has been pinged
-			j = std::find_if(rb.begin(), rb.end(), boost::bind(&node_entry::pinged, _1) == false);
+			j = std::find_if(rb.begin(), rb.end(), boost::bind(&node_entry::pinged, boost::placeholders::_1) == false);
 			if (j == rb.end()) j = rb.begin();
-			m_ips.erase(j->addr().to_v4().to_bytes());
+			m_ips.erase(j->addr());
 			rb.erase(j);
 		}
 
 		if (rb.empty()) rb.reserve(m_bucket_size);
 		rb.push_back(e);
-		m_ips.insert(e.addr().to_v4().to_bytes());
+		m_ips.insert(e.addr());
 //		TORRENT_LOG(table) << "inserting node in replacement cache: " << e.id << " " << e.addr();
 		return ret;
 	}
@@ -657,7 +704,7 @@ bool routing_table::add_node(node_entry e)
 	else if (int(nrb.size()) < m_bucket_size)
 		nrb.push_back(e);
 
-	m_ips.insert(e.addr().to_v4().to_bytes());
+	m_ips.insert(e.addr());
 
 	while (m_buckets.back().live_nodes.size() > bucket_limit(m_buckets.size()-1))
 		split_bucket();
@@ -756,7 +803,7 @@ void routing_table::node_failed(node_id const& id, udp::endpoint const& ep)
 	bucket_t& rb = i->replacements;
 
 	bucket_t::iterator j = std::find_if(b.begin(), b.end()
-		, boost::bind(&node_entry::id, _1) == id);
+		, boost::bind(&node_entry::id, boost::placeholders::_1) == id);
 
 	if (j == b.end()) return;
 
@@ -782,21 +829,21 @@ void routing_table::node_failed(node_id const& id, udp::endpoint const& ep)
 		// has never responded at all, remove it
 		if (j->fail_count() >= m_settings.max_fail_count || !j->pinged())
 		{
-			m_ips.erase(j->addr().to_v4().to_bytes());
+			m_ips.erase(j->addr());
 			b.erase(j);
 		}
 		return;
 	}
 
-	m_ips.erase(j->addr().to_v4().to_bytes());
+	m_ips.erase(j->addr());
 	b.erase(j);
 
 	// sort by RTT first, to find the node with the lowest
 	// RTT that is pinged
 	std::sort(rb.begin(), rb.end()
-		, boost::bind(&node_entry::rtt, _1) < boost::bind(&node_entry::rtt, _2));
+		, boost::bind(&node_entry::rtt, boost::placeholders::_1) < boost::bind(&node_entry::rtt, boost::placeholders::_2));
 
-	j = std::find_if(rb.begin(), rb.end(), boost::bind(&node_entry::pinged, _1));
+	j = std::find_if(rb.begin(), rb.end(), boost::bind(&node_entry::pinged, boost::placeholders::_1));
 	if (j == rb.end()) j = rb.begin();
 	b.push_back(*j);
 	rb.erase(j);
@@ -872,15 +919,15 @@ void routing_table::find_node(node_id const& target
 		{
 			std::remove_copy_if(b.begin(), b.end()
 				, std::back_inserter(l)
-				, !boost::bind(&node_entry::confirmed, _1));
+				, !boost::bind(&node_entry::confirmed, boost::placeholders::_1));
 		}
 
 		if (int(l.size()) >= count)
 		{
 			// sort the nodes by how close they are to the target
 			std::sort(l.begin(), l.end(), boost::bind(&compare_ref
-				, boost::bind(&node_entry::id, _1)
-				, boost::bind(&node_entry::id, _2), target));
+				, boost::bind(&node_entry::id, boost::placeholders::_1)
+				, boost::bind(&node_entry::id, boost::placeholders::_2), target));
 
 			l.resize(count);
 			return;
@@ -894,8 +941,8 @@ void routing_table::find_node(node_id const& target
 	{
 		// sort the nodes by how close they are to the target
 		std::sort(l.begin(), l.end(), boost::bind(&compare_ref
-			, boost::bind(&node_entry::id, _1)
-			, boost::bind(&node_entry::id, _2), target));
+			, boost::bind(&node_entry::id, boost::placeholders::_1)
+			, boost::bind(&node_entry::id, boost::placeholders::_2), target));
 		return;
 	}
 
@@ -913,15 +960,15 @@ void routing_table::find_node(node_id const& target
 		else
 		{
 			std::remove_copy_if(b.begin(), b.end(), std::back_inserter(l)
-				, !boost::bind(&node_entry::confirmed, _1));
+				, !boost::bind(&node_entry::confirmed, boost::placeholders::_1));
 		}
 
 		if (int(l.size()) >= count)
 		{
 			// sort the nodes by how close they are to the target
 			std::sort(l.begin(), l.end(), boost::bind(&compare_ref
-				, boost::bind(&node_entry::id, _1)
-				, boost::bind(&node_entry::id, _2), target));
+				, boost::bind(&node_entry::id, boost::placeholders::_1)
+				, boost::bind(&node_entry::id, boost::placeholders::_2), target));
 
 			l.resize(count);
 			return;
@@ -931,8 +978,8 @@ void routing_table::find_node(node_id const& target
 
 	// sort the nodes by how close they are to the target
 	std::sort(l.begin(), l.end(), boost::bind(&compare_ref
-		, boost::bind(&node_entry::id, _1)
-		, boost::bind(&node_entry::id, _2), target));
+		, boost::bind(&node_entry::id, boost::placeholders::_1)
+		, boost::bind(&node_entry::id, boost::placeholders::_2), target));
 
 	if (int(l.size()) >= count)
 		l.resize(count);

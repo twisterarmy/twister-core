@@ -1,6 +1,12 @@
 /*
 
-Copyright (c) 2006-2012, Arvid Norberg
+Copyright (c) 2006-2020, Arvid Norberg
+Copyright (c) 2015-2016, 2018, Steven Siloti
+Copyright (c) 2015, Thomas Yuan
+Copyright (c) 2016-2018, Alden Torres
+Copyright (c) 2016, Andrei Kurushin
+Copyright (c) 2016, Angel Leon
+Copyright (c) 2016, Pavel Pimenov
 Copyright (c) 2025, the twisterarmy developers
 All rights reserved.
 
@@ -35,6 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define ROUTING_TABLE_HPP
 
 #include <vector>
+#include <unordered_set>
 #include <boost/cstdint.hpp>
 
 #include <boost/version.hpp>
@@ -77,7 +84,52 @@ struct routing_table_node
 {
 	bucket_t replacements;
 	bucket_t live_nodes;
-	ptime last_active;
+	ptime last_active; // @TODO deprecated
+};
+
+struct ipv4_hash
+{
+	using argument_type = address_v4::bytes_type;
+	using result_type = std::size_t;
+	result_type operator()(argument_type const& ip) const
+	{
+		return std::hash<std::uint32_t>()(*reinterpret_cast<std::uint32_t const*>(&ip[0]));
+	}
+};
+
+struct ipv6_hash
+{
+	using argument_type = address_v6::bytes_type;
+	using result_type = std::size_t;
+	result_type operator()(argument_type const& ip) const
+	{
+		return std::hash<std::uint64_t>()(*reinterpret_cast<std::uint64_t const*>(&ip[0]));
+	}
+};
+
+struct TORRENT_EXTRA_EXPORT ip_set
+{
+	void insert(address const& addr);
+	bool exists(address const& addr) const;
+	void erase(address const& addr);
+
+	void clear()
+	{
+		m_ip4s.clear();
+		m_ip6s.clear();
+	}
+
+	bool operator==(ip_set const& rh)
+	{
+		return m_ip4s == rh.m_ip4s && m_ip6s == rh.m_ip6s;
+	}
+
+	std::size_t size() const { return m_ip4s.size() + m_ip6s.size(); }
+
+	// these must be multisets because there can be multiple routing table
+	// entries for a single IP when restrict_routing_ips is set to false
+	std::unordered_multiset<address_v4::bytes_type, ipv4_hash> m_ip4s;
+	std::unordered_multiset<address_v6::bytes_type, ipv6_hash> m_ip6s;
 };
 
 // differences in the implementation from the description in
@@ -219,9 +271,8 @@ private:
 
 	// these are all the IPs that are in the routing
 	// table. It's used to only allow a single entry
-	// per IP in the whole table. Currently only for
-	// IPv4
-	std::set<address_v4::bytes_type> m_ips;
+	// per IP in the whole table.
+	ip_set m_ips;
 };
 
 } } // namespace libtorrent::dht
