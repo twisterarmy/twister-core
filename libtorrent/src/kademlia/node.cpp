@@ -241,7 +241,12 @@ void node_impl::incoming(msg const& m)
 		entry e;
 		incoming_error(e, "missing 'z' entry");
 		// [MF] silently ignore bad packet
-		//m_sock->send_packet(e, m.addr, 0);
+		// m_sock->send_packet(e, m.addr, 0);
+		printf(
+			"[DHT] [%s:%d] bad packet!\n",
+			m.addr.address().to_string().c_str(),
+			m.addr.port()
+		);
 		return;
 	}
 
@@ -254,8 +259,20 @@ void node_impl::incoming(msg const& m)
 			node_id id;
 			// reply to our request?
 			// map transaction => observer, call o->reply, ret true if ok
-			if (m_rpc.incoming(m, &id))
+			if (m_rpc.incoming(m, &id)) {
 				refresh(id, boost::bind(&nop));
+				printf(
+					"[DHT] [%s:%d] handle refresh request.\n",
+					m.addr.address().to_string().c_str(),
+					m.addr.port()
+				);
+			} else {
+				printf(
+					"[DHT] [%s:%d] unhandled request.\n",
+					m.addr.address().to_string().c_str(),
+					m.addr.port()
+				);
+			}
 			break;
 		}
 		case 'q':
