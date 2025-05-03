@@ -100,9 +100,13 @@ http_connection::~http_connection()
 #endif
 }
 
-void http_connection::get(std::string const& url, time_duration timeout, int prio
-	, proxy_settings const* ps, int handle_redirects, std::string const& user_agent
-	, address const& bind_addr
+void http_connection::get(
+	  std::string const& url
+	, time_duration timeout, int prio
+	, proxy_settings const* ps
+	, int handle_redirects
+	, std::string const& user_agent
+	, std::vector<address> const& ip
 #if TORRENT_USE_I2P
 	, i2p_connection* i2p_conn
 #endif
@@ -150,7 +154,7 @@ void http_connection::get(std::string const& url, time_duration timeout, int pri
 
 	bool ssl = false;
 	if (protocol == "https") ssl = true;
-	
+
 	char request[2048];
 	char* end = request + sizeof(request);
 	char* ptr = request;
@@ -186,7 +190,7 @@ void http_connection::get(std::string const& url, time_duration timeout, int pri
 
 	if (!m_user_agent.empty())
 		APPEND_FMT1("User-Agent: %s\r\n", m_user_agent.c_str());
-	
+
 	if (m_bottled)
 		APPEND_FMT("Accept-Encoding: gzip\r\n");
 
@@ -197,17 +201,30 @@ void http_connection::get(std::string const& url, time_duration timeout, int pri
 
 	sendbuffer.assign(request);
 	m_url = url;
-	start(hostname, to_string(port).elems, timeout, prio
-		, ps, ssl, handle_redirects, bind_addr
+	start(
+		hostname
+		, to_string(port).elems
+		, timeout
+		, prio
+		, ps
+		, ssl
+		, handle_redirects
+		, ip
 #if TORRENT_USE_I2P
 		, i2p_conn
 #endif
-		);
+	);
 }
 
-void http_connection::start(std::string const& hostname, std::string const& port
-	, time_duration timeout, int prio, proxy_settings const* ps, bool ssl, int handle_redirects
-	, address const& bind_addr
+void http_connection::start(
+	  std::string const& hostname
+	, std::string const& port
+	, time_duration timeout
+	, int prio
+	, proxy_settings const* ps
+	, bool ssl
+	, int handle_redirects
+	, std::vector<address> const& bind_addresses
 #if TORRENT_USE_I2P
 	, i2p_connection* i2p_conn
 #endif
@@ -245,7 +262,7 @@ void http_connection::start(std::string const& hostname, std::string const& port
 	}
 
 	if (m_sock.is_open() && m_hostname == hostname && m_port == port
-		&& m_ssl == ssl && m_bind_addr == bind_addr)
+		&& m_ssl == ssl && m_bind_addresses == bind_addresses)
 	{
 #if defined TORRENT_ASIO_DEBUGGING
 		add_outstanding_async("http_connection::on_write");
@@ -256,7 +273,7 @@ void http_connection::start(std::string const& hostname, std::string const& port
 	else
 	{
 		m_ssl = ssl;
-		m_bind_addr = bind_addr;
+		m_bind_addresses = bind_addresses;
 		error_code ec;
 		if (m_sock.is_open()) m_sock.close(ec);
 
@@ -322,16 +339,23 @@ void http_connection::start(std::string const& hostname, std::string const& port
 		instantiate_connection(get_io_service(m_resolver)
 			, proxy ? *proxy : null_proxy, m_sock, userdata);
 
-		if (m_bind_addr != address_v4::any())
+		if (!m_bind_addresses.empty())
 		{
-			error_code ec;
-			m_sock.open(m_bind_addr.is_v4()?tcp::v4():tcp::v6(), ec);
-			m_sock.bind(tcp::endpoint(m_bind_addr, 0), ec);
-			if (ec)
+			for (auto const& m_bind_address : m_bind_addresses)
 			{
-				get_io_service(m_resolver).post(boost::bind(&http_connection::callback
-					, me, ec, (char*)0, 0));
-				return;
+				error_code ec;
+				m_sock.open(m_bind_address.is_v4() ? tcp::v4() : tcp::v6(), ec);
+				m_sock.bind(tcp::endpoint(m_bind_address, 0), ec);
+				if (ec)
+				{
+					get_io_service(m_resolver).post(
+						boost::bind(
+							&http_connection::callback
+							, me, ec, (char*)0, 0
+						)
+					);
+					return;
+				}
 			}
 		}
 
@@ -517,15 +541,14 @@ void http_connection::on_resolve(error_code const& e
 	// The following statement causes msvc to crash (ICE). Since it's not
 	// necessary in the vast majority of cases, just ignore the endpoint
 	// order for windows
-#if !defined _MSC_VER || _MSC_VER > 1310
+//#if !defined _MSC_VER || _MSC_VER > 1310
 	// sort the endpoints so that the ones with the same IP version as our
 	// bound listen socket are first. So that when contacting a tracker,
 	// we'll talk to it from the same IP that we're listening on
-	if (m_bind_addr != address_v4::any())
-		std::partition(m_endpoints.begin(), m_endpoints.end()
-			, boost::bind(&address::is_v4, boost::bind(&tcp::endpoint::address, _1))
-				== m_bind_addr.is_v4());
-#endif
+
+	// @TODO this feature wants upgrade from the latest libtorrent implementation,
+	// according to our multiprotocol features.
+//#endif
 
 	queue_connect();
 }
@@ -590,7 +613,7 @@ void http_connection::on_connect(error_code const& e)
 	m_last_receive = time_now_hires();
 	m_start_time = m_last_receive;
 	if (!e)
-	{ 
+	{
 		if (m_connect_handler) m_connect_handler(*this);
 #if defined TORRENT_ASIO_DEBUGGING
 		add_outstanding_async("http_connection::on_write");
@@ -604,9 +627,9 @@ void http_connection::on_connect(error_code const& e)
 		error_code ec;
 		m_sock.close(ec);
 		queue_connect();
-	} 
+	}
 	else
-	{ 
+	{
 		boost::shared_ptr<http_connection> me(shared_from_this());
 		callback(e);
 		close();
@@ -780,8 +803,14 @@ void http_connection::on_read(error_code const& e
 					= parse_url_components(location, ec);
 				if (!ec)
 				{
-					get(location, m_completion_timeout, m_priority, &m_proxy, m_redirects - 1
-						, m_user_agent, m_bind_addr
+					get(
+						location,
+						m_completion_timeout,
+						m_priority,
+						&m_proxy,
+						m_redirects - 1,
+						m_user_agent,
+						m_bind_addresses
 #if TORRENT_USE_I2P
 						, m_i2p_conn
 #endif
@@ -801,8 +830,14 @@ void http_connection::on_read(error_code const& e
 						url += '/';
 					url += location;
 
-					get(url, m_completion_timeout, m_priority, &m_proxy, m_redirects - 1
-						, m_user_agent, m_bind_addr
+					get(
+						url,
+						m_completion_timeout,
+						m_priority,
+						&m_proxy,
+						m_redirects - 1,
+						m_user_agent,
+						m_bind_addresses
 #if TORRENT_USE_I2P
 						, m_i2p_conn
 #endif
@@ -810,7 +845,7 @@ void http_connection::on_read(error_code const& e
 				}
 				return;
 			}
-	
+
 			m_redirects = 0;
 		}
 
@@ -932,4 +967,3 @@ void http_connection::rate_limit(int limit)
 }
 
 }
-

@@ -65,7 +65,7 @@ struct http_connection;
 class connection_queue;
 
 const int default_max_bottled_buffer_size = 2*1024*1024;
-	
+
 typedef boost::function<void(error_code const&
 	, http_parser const&, char const* data, int size, http_connection&)> http_handler;
 
@@ -98,18 +98,28 @@ struct TORRENT_EXTRA_EXPORT http_connection
 
 	std::string sendbuffer;
 
-	void get(std::string const& url, time_duration timeout = seconds(30)
-		, int prio = 0, proxy_settings const* ps = 0, int handle_redirects = 5
-		, std::string const& user_agent = "", address const& bind_addr = address_v4::any()
+	void get(
+		std::string const& url
+		, time_duration timeout = seconds(30)
+		, int prio = 0
+		, proxy_settings const* ps = 0
+		, int handle_redirects = 5
+		, std::string const& user_agent = ""
+		, std::vector<address> const& ip = std::vector<address>()
 #if TORRENT_USE_I2P
 		, i2p_connection* i2p_conn = 0
 #endif
-		);
+	);
 
-	void start(std::string const& hostname, std::string const& port
-		, time_duration timeout, int prio = 0, proxy_settings const* ps = 0
-		, bool ssl = false, int handle_redirect = 5
-		, address const& bind_addr = address_v4::any()
+	void start(
+		std::string const& hostname
+		, std::string const& port
+		, time_duration timeout
+		, int prio = 0
+		, proxy_settings const* ps = 0
+		, bool ssl = false
+		, int handle_redirect = 5
+		, std::vector<address> const& bind_addresses = std::vector<address>()
 #if TORRENT_USE_I2P
 		, i2p_connection* i2p_conn = 0
 #endif
@@ -120,7 +130,7 @@ struct TORRENT_EXTRA_EXPORT http_connection
 	socket_type const& socket() const { return m_sock; }
 
 	std::list<tcp::endpoint> const& endpoints() const { return m_endpoints; }
-	
+
 private:
 
 #if TORRENT_USE_I2P
@@ -157,7 +167,7 @@ private:
 	time_duration m_completion_timeout;
 	ptime m_last_receive;
 	ptime m_start_time;
-	
+
 	// bottled means that the handler is called once, when
 	// everything is received (and buffered in memory).
 	// non bottled means that once the headers have been
@@ -166,7 +176,7 @@ private:
 
 	// maximum size of bottled buffer
 	int m_max_bottled_buffer_size;
-	
+
 	// set to true the first time the handler is called
 	bool m_called;
 	std::string m_hostname;
@@ -209,15 +219,14 @@ private:
 	// true if the connection is using ssl
 	bool m_ssl;
 
-	// the address to bind to. address_v4::any()
-	// means do not bind
-	address m_bind_addr;
-
 	// the priority we have in the connection queue.
 	// 0 is normal, 1 is high
 	int m_priority;
 
 	bool m_abort;
+
+	// the addresses to bind
+	std::vector<address> m_bind_addresses;
 };
 
 }

@@ -1,6 +1,12 @@
 /*
 
 Copyright (c) 2003-2012, Arvid Norberg
+Copyright (c) 2015, Mikhail Titov
+Copyright (c) 2004-2020, Arvid Norberg
+Copyright (c) 2016-2018, 2020, Alden Torres
+Copyright (c) 2016, Pavel Pimenov
+Copyright (c) 2016-2017, Steven Siloti
+Copyright (c) 2025, the twisterarmy developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -100,7 +106,7 @@ namespace libtorrent
 				&tracker_connection::fail_disp, self(), ec));
 			return;
 		}
-		
+
 		session_settings const& settings = m_ses.settings();
 
 		if (m_proxy.proxy_hostnames
@@ -156,7 +162,9 @@ namespace libtorrent
 #endif
 
 		// pick another target endpoint and try again
-		m_target = pick_target_endpoint();
+		if (auto optional_target = pick_target_endpoint()) {
+			m_target = *optional_target;
+		}
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		if (cb) cb->debug_log("*** UDP_TRACKER trying next IP [ host: \"%s\" ip: \"%s\" ]"
@@ -191,7 +199,7 @@ namespace libtorrent
 		}
 
 		restart_read_timeout();
-		
+
 		// look for an address that has the same kind as the one
 		// we're listening on. To make sure the tracker get our
 		// correct listening address.
@@ -205,7 +213,7 @@ namespace libtorrent
 			for (std::list<tcp::endpoint>::iterator k = m_endpoints.begin();
 				k != m_endpoints.end();)
 			{
-				if (m_ses.m_ip_filter.access(k->address()) == ip_filter::blocked) 
+				if (m_ses.m_ip_filter.access(k->address()) == ip_filter::blocked)
 				{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 					if (cb) cb->debug_log("*** UDP_TRACKER [ IP blocked by filter: %s ]"
@@ -224,50 +232,44 @@ namespace libtorrent
 			fail(error_code(errors::banned_by_ip_filter));
 			return;
 		}
-		
-		m_target = pick_target_endpoint();
 
-		if (cb) cb->m_tracker_address = tcp::endpoint(m_target.address(), m_target.port());
-
-		start_announce();
+		if (auto optional_target = pick_target_endpoint()) {
+			m_target = *optional_target;
+			if (cb) cb->m_tracker_address = tcp::endpoint(m_target.address(), m_target.port());
+			start_announce();
+		}
 	}
 
-	udp::endpoint udp_tracker_connection::pick_target_endpoint() const
+	// find first endpoint that matches our bind interface type
+	// @TODO yet not sure if it is possible to handle multiple connections for the `ip` array (in the UDP context)
+	std::optional<udp::endpoint> udp_tracker_connection::pick_target_endpoint() const
 	{
-		std::list<tcp::endpoint>::const_iterator iter = m_endpoints.begin();
-		udp::endpoint target = udp::endpoint(iter->address(), iter->port());
-
-		if (bind_interface() != address_v4::any())
+		for (auto const& ip : ip())
 		{
-			// find first endpoint that matches our bind interface type
-			for (; iter != m_endpoints.end() && iter->address().is_v4()
-				!= bind_interface().is_v4(); ++iter);
-
-			if (iter == m_endpoints.end())
+			for (auto const& m_endpoint : m_endpoints)
 			{
-				TORRENT_ASSERT(target.address().is_v4() != bind_interface().is_v4());
-				boost::shared_ptr<request_callback> cb = requester();
-				if (cb)
-				{
-					char const* tracker_address_type = target.address().is_v4() ? "IPv4" : "IPv6";
-					char const* bind_address_type = bind_interface().is_v4() ? "IPv4" : "IPv6";
-					char msg[200];
-					snprintf(msg, sizeof(msg)
-						, "the tracker only resolves to an %s  address, and you're "
-						"listening on an %s socket. This may prevent you from receiving "
-						"incoming connections."
-						, tracker_address_type, bind_address_type);
+				if ((m_endpoint.address().is_v4() && ip.is_v4()) ||
+					(m_endpoint.address().is_v6() && ip.is_v6()))
+					return udp::endpoint(m_endpoint.address(), m_endpoint.port());
+				else {
+					boost::shared_ptr<request_callback> cb = requester();
+					if (cb)
+					{
+						char const* tracker_address_type = m_endpoint.address().is_v4() ? "IPv4" : "IPv6";
+						char const* bind_address_type = ip.is_v4() ? "IPv4" : "IPv6";
+						char msg[200];
+						snprintf(msg, sizeof(msg)
+							, "the tracker only resolves to an %s  address, and you're "
+							"listening on an %s socket. This may prevent you from receiving "
+							"incoming connections."
+							, tracker_address_type, bind_address_type);
 
-					cb->tracker_warning(tracker_req(), msg);
+						cb->tracker_warning(tracker_req(), msg);
+					}
 				}
 			}
-			else
-			{
-				target = udp::endpoint(iter->address(), iter->port());
-			}
 		}
-
-		return target;
+		return std::nullopt;
 	}
 
 	void udp_tracker_connection::start_announce()
@@ -340,7 +342,7 @@ namespace libtorrent
 		// sent the packet through a proxy only knowing
 		// the hostname, in which case this packet might be for us
 		if (!is_any(m_target.address()) && m_target != ep) return false;
-		
+
 		if (e) fail(e);
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
@@ -399,7 +401,7 @@ namespace libtorrent
 		}
 		return false;
 	}
-	
+
 	bool udp_tracker_connection::on_connect_response(char const* buf, int size)
 	{
 		// ignore packets smaller than 16 bytes
@@ -619,7 +621,7 @@ namespace libtorrent
 			close();
 			return true;
 		}
-		
+
 		cb->tracker_scrape_response(tracker_req()
 			, complete, incomplete, downloaded, -1);
 
@@ -720,4 +722,3 @@ namespace libtorrent
 	}
 
 }
-

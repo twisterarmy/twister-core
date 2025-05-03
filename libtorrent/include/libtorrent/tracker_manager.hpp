@@ -127,7 +127,7 @@ namespace libtorrent
 		std::string trackerid;
 		int key;
 		int num_want;
-		address bind_ip;
+		std::vector<address> ip;
 		bool send_stats;
 		bool apply_ip_filter;
 #ifdef TORRENT_USE_OPENSSL
@@ -194,7 +194,7 @@ namespace libtorrent
 	// necessary for logging member offsets
 	private:
 #endif
-	
+
 		void timeout_callback(error_code const&);
 
 		boost::intrusive_ptr<timeout_handler> self()
@@ -207,7 +207,7 @@ namespace libtorrent
 		ptime m_read_time;
 		// the asio async operation
 		deadline_timer m_timeout;
-		
+
 		int m_completion_timeout;
 		int m_read_timeout;
 
@@ -234,7 +234,7 @@ namespace libtorrent
 			, int interval = 0, int min_interval = 0);
 		virtual void start() = 0;
 		virtual void close();
-		address const& bind_interface() const { return m_req.bind_ip; }
+		std::vector<address> const& ip() const { return m_req.ip; }
 		void sent_bytes(int bytes);
 		void received_bytes(int bytes);
 		virtual bool on_receive(error_code const& ec, udp::endpoint const& ep
@@ -296,7 +296,7 @@ namespace libtorrent
 		// they may be addressed to hostname
 		virtual bool incoming_packet(error_code const& e, char const* hostname
 			, char const* buf, int size);
-		
+
 	private:
 
 		typedef mutex mutex_t;
@@ -312,4 +312,3 @@ namespace libtorrent
 }
 
 #endif // TORRENT_TRACKER_MANAGER_HPP_INCLUDED
-

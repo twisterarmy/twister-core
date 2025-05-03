@@ -1,6 +1,8 @@
 /*
 
-Copyright (c) 2003-2012, Arvid Norberg
+Copyright (c) 2003-2008, 2010, 2012, 2014-2017, 2019-2020, Arvid Norberg
+Copyright (c) 2016, Alden Torres
+Copyright (c) 2025, the twisterarmy developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,6 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <utility>
 #include <ctime>
+#include <optional>
 
 #ifdef _MSC_VER
 #pragma warning(push, 1)
@@ -118,7 +121,7 @@ namespace libtorrent
 
 		virtual void on_timeout(error_code const& ec);
 
-		udp::endpoint pick_target_endpoint() const;
+		std::optional<udp::endpoint> pick_target_endpoint() const;
 
 		bool m_abort;
 		std::string m_hostname;
@@ -146,4 +149,3 @@ namespace libtorrent
 }
 
 #endif // TORRENT_UDP_TRACKER_CONNECTION_HPP_INCLUDED
-

@@ -65,7 +65,7 @@ using namespace libtorrent;
 
 namespace libtorrent
 {
-#if TORRENT_USE_I2P	
+#if TORRENT_USE_I2P
 	// defined in torrent_info.cpp
 	bool is_i2p_url(std::string const& url);
 #endif
@@ -113,7 +113,7 @@ namespace libtorrent
 			}
 			url.replace(pos, 8, "scrape");
 		}
-		
+
 #if TORRENT_USE_I2P
 		bool i2p = is_i2p_url(url);
 #else
@@ -130,7 +130,7 @@ namespace libtorrent
 			url += "&";
 		else
 			url += "?";
-		
+
 		if (tracker_req().kind == tracker_request::announce_request)
 		{
 			const char* event_string[] = {"completed", "started", "stopped", "paused"};
@@ -184,7 +184,7 @@ namespace libtorrent
 			if (i2p)
 			{
 				url += "&ip=";
-				url += escape_string(m_i2p_conn->local_endpoint().c_str()
+				url += escape_string(m_i2p_conn->local_endpoint().c_str() // is I2P feature in use? @TODO
 					, m_i2p_conn->local_endpoint().size());
 				url += ".i2p";
 			}
@@ -192,7 +192,21 @@ namespace libtorrent
 #endif
 			if (!m_ses.settings().anonymous_mode)
 			{
-				if (!settings.announce_ip.empty())
+				if (!tracker_req().ip.empty())
+				{
+					for (auto const& address : tracker_req().ip)
+					{
+						std::string const str = address.to_string();
+						std::string const esc = escape_string(str.c_str(), str.size());
+						if (address.is_v6())
+							url += "&ipv6=" + esc;
+						else
+							url += "&ipv4=" + esc + "&ip=" + esc;
+					}
+				}
+				// @TODO auto-detected values are deprecated,
+				// the whitelist addresses should be defined on `twisterd` init by using `-bind` + `-externalip` values!
+				else if (!settings.announce_ip.empty())
 				{
 					url += "&ip=" + escape_string(
 						settings.announce_ip.c_str(), settings.announce_ip.size());
@@ -226,7 +240,7 @@ namespace libtorrent
 		m_tracker_connection->get(url, seconds(timeout)
 			, tracker_req().event == tracker_request::stopped ? 2 : 1
 			, &m_ps, 5, settings.anonymous_mode ? "" : settings.user_agent
-			, bind_interface()
+			, ip()
 #if TORRENT_USE_I2P
 			, m_i2p_conn
 #endif
@@ -263,7 +277,7 @@ namespace libtorrent
 		for (std::list<tcp::endpoint>::iterator i = endpoints.begin();
 			i != endpoints.end();)
 		{
-			if (m_ses.m_ip_filter.access(i->address()) == ip_filter::blocked) 
+			if (m_ses.m_ip_filter.access(i->address()) == ip_filter::blocked)
 				i = endpoints.erase(i);
 			else
 				++i;
@@ -300,7 +314,7 @@ namespace libtorrent
 			fail(ec);
 			return;
 		}
-		
+
 		if (!parser.header_finished())
 		{
 			fail(asio::error::eof);
@@ -313,13 +327,13 @@ namespace libtorrent
 				, parser.status_code(), parser.message().c_str());
 			return;
 		}
-	
+
 		if (ec && ec != asio::error::eof)
 		{
 			fail(ec, parser.status_code());
 			return;
 		}
-		
+
 		received_bytes(size + parser.body_start());
 
 		// handle tracker response
@@ -388,7 +402,7 @@ namespace libtorrent
 
 		// if no interval is specified, default to 30 minutes
 		if (interval == 0) interval = 1800;
-		
+
 		std::string trackerid;
 		lazy_entry const* tracker_id = e.dict_find_string("tracker id");
 		if (tracker_id)
@@ -521,7 +535,7 @@ namespace libtorrent
 				external_ip = detail::read_v6_address(p);
 #endif
 		}
-		
+
 		int complete = int(e.dict_find_int_value("complete", -1));
 		int incomplete = int(e.dict_find_int_value("incomplete", -1));
 		int downloaded = int(e.dict_find_int_value("downloaded", -1));
@@ -544,4 +558,3 @@ namespace libtorrent
 	}
 
 }
-
