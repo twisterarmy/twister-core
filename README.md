@@ -25,10 +25,11 @@ not interoperate with existing networks (on purpose).
 ## Compiling
 
 > [!NOTE]
-> See also the [Flatpak bundle](https://github.com/twisterarmy/twister)!
+> Latest version tested on C++17
 
 Please follow the instructions for your platform:
 
+- [Flatpak](https://github.com/twisterarmy/twister)
 - [UNIX](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/build-unix.md)
 - [Debian/Ubuntu](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/building-on-ubuntu-debian.md)
 - [Fedora](https://github.com/twisterarmy/twister-core/blob/twisterarmy/doc/building-on-fedora.md)
