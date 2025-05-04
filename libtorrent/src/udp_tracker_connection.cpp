@@ -162,8 +162,9 @@ namespace libtorrent
 #endif
 
 		// pick another target endpoint and try again
-		if (auto optional_target = pick_target_endpoint()) {
-			m_target = *optional_target;
+		for (const udp::endpoint& _ep: pick_target_endpoints()) {
+			m_target = udp::endpoint(_ep.address(), _ep.port());
+			break; // @TODO handle multitargets
 		}
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
@@ -233,24 +234,26 @@ namespace libtorrent
 			return;
 		}
 
-		if (auto optional_target = pick_target_endpoint()) {
-			m_target = *optional_target;
+		for (const udp::endpoint& _ep : pick_target_endpoints())
+		{
+			m_target = udp::endpoint(_ep.address(), _ep.port());
 			if (cb) cb->m_tracker_address = tcp::endpoint(m_target.address(), m_target.port());
 			start_announce();
+			break; // @TODO yet not sure if it is possible to handle multiple connections for the `ip` array (in the UDP context)
 		}
 	}
 
-	// find first endpoint that matches our bind interface type
-	// @TODO yet not sure if it is possible to handle multiple connections for the `ip` array (in the UDP context)
-	std::optional<udp::endpoint> udp_tracker_connection::pick_target_endpoint() const
+	// relate endpoints that matches our bind interface type
+	std::vector<udp::endpoint> udp_tracker_connection::pick_target_endpoints() const
 	{
-		for (auto const& ip : ip())
-		{
-			for (auto const& m_endpoint : m_endpoints)
-			{
+		std::vector<udp::endpoint> target_endpoints;
+		for (auto const& ip : ip()) {
+			for (auto const& m_endpoint : m_endpoints) {
 				if ((m_endpoint.address().is_v4() && ip.is_v4()) ||
 					(m_endpoint.address().is_v6() && ip.is_v6()))
-					return udp::endpoint(m_endpoint.address(), m_endpoint.port());
+					target_endpoints.push_back(
+						udp::endpoint(m_endpoint.address(), m_endpoint.port())
+					);
 				else {
 					boost::shared_ptr<request_callback> cb = requester();
 					if (cb)
@@ -269,7 +272,7 @@ namespace libtorrent
 				}
 			}
 		}
-		return std::nullopt;
+		return target_endpoints;
 	}
 
 	void udp_tracker_connection::start_announce()

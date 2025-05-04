@@ -39,7 +39,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <utility>
 #include <ctime>
-#include <optional>
 
 #ifdef _MSC_VER
 #pragma warning(push, 1)
@@ -121,7 +120,7 @@ namespace libtorrent
 
 		virtual void on_timeout(error_code const& ec);
 
-		std::optional<udp::endpoint> pick_target_endpoint() const;
+		std::vector<udp::endpoint> pick_target_endpoints() const;
 
 		bool m_abort;
 		std::string m_hostname;

@@ -24,9 +24,6 @@ not interoperate with existing networks (on purpose).
 
 ## Compiling
 
-> [!NOTE]
-> Latest version tested on C++17
-
 Please follow the instructions for your platform:
 
 - [Flatpak](https://github.com/twisterarmy/twister)
