@@ -703,8 +703,9 @@ bool AppInit2(boost::thread_group& threadGroup)
         BOOST_FOREACH(string strAddr, mapMultiArgs["-externalip"]) {
             CService addrLocal(strAddr, GetListenPort(), fNameLookup);
             if (!addrLocal.IsValid())
-                return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
-            AddLocal(CService(strAddr, GetListenPort(), fNameLookup), LOCAL_MANUAL);
+                return InitError(strprintf(_("Cannot resolve -externalip address: `%s`"), strAddr.c_str()));
+            if (!AddLocal(CService(strAddr, GetListenPort(), fNameLookup), LOCAL_MANUAL))
+                return InitError(strprintf(_("Cannot define the local address for -externalip: `%s` (tip: is the -onlynet option missing?)"), strAddr.c_str()));
         }
     }
 
