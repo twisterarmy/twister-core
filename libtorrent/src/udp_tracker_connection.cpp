@@ -533,8 +533,10 @@ namespace libtorrent
 		int min_interval = 60;
 		int incomplete = detail::read_int32(buf);
 		int complete = detail::read_int32(buf);
-		int num_peers = (size - 20) / 6;
-		if ((size - 20) % 6 != 0)
+		bool const is_v6 = m_target.address().is_v6(); // compute once
+		int const ip_stride = is_v6 ? 18 : 6;
+		auto const num_peers = size / ip_stride;
+		if (size % ip_stride != 0)
 		{
 			fail(error_code(errors::invalid_tracker_response_length));
 			return false;
@@ -556,22 +558,28 @@ namespace libtorrent
 		}
 
 		std::vector<peer_entry> peer_list;
-		for (int i = 0; i < num_peers; ++i)
+
+		if (is_v6)
 		{
-			// TODO: it would be more efficient to not use a string here.
-			// however, the problem is that some trackers will respond
-			// with actual strings. For example i2p trackers
-			peer_entry e;
-			char ip_string[100];
-			unsigned int a = detail::read_uint8(buf);
-			unsigned int b = detail::read_uint8(buf);
-			unsigned int c = detail::read_uint8(buf);
-			unsigned int d = detail::read_uint8(buf);
-			snprintf(ip_string, 100, "%u.%u.%u.%u", a, b, c, d);
-			e.ip = ip_string;
-			e.port = detail::read_uint16(buf);
-			e.pid.clear();
-			peer_list.push_back(e);
+			for (int i = 0; i < num_peers; ++i)
+			{
+				peer_entry e;
+				std::memcpy(e.ip.data(), buf, 16);
+				buf += 16;
+				e.port = detail::read_uint16(buf);
+				peer_list.push_back(e);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < num_peers; ++i)
+			{
+				peer_entry e;
+				std::memcpy(e.ip.data(), buf, 4);
+				buf += 8;
+				e.port = detail::read_uint16(buf);
+				peer_list.push_back(e);
+			}
 		}
 
 		std::list<address> ip_list;
