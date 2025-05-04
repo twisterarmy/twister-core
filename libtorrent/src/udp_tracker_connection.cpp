@@ -570,6 +570,7 @@ namespace libtorrent
 				buf += 8;
 			}
 			e.port = detail::read_uint16(buf);
+			e.pid.clear();
 			peer_list.push_back(e);
 		}
 
