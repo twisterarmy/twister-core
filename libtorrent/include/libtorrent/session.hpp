@@ -129,44 +129,48 @@ namespace libtorrent
 		// The other constructor, that takes a port range and an interface as well as the fingerprint
 		// will automatically try to listen on a port on the given interface. For more information about
 		// the parameters, see ``listen_on()`` function.
-		// 
+		//
 		// The flags paramater can be used to start default features (upnp & nat-pmp) and default plugins
 		// (ut_metadata, ut_pex and smart_ban). The default is to start those things. If you do not want
 		// them to start, pass 0 as the flags parameter.
-		// 
+		//
 		// The ``alert_mask`` is the same mask that you would send to `set_alert_mask()`_.
-		session(CLevelDB &swarmDb, fingerprint const& print = fingerprint("LT"
-			, LIBTORRENT_VERSION_MAJOR, LIBTORRENT_VERSION_MINOR, 0, 0)
+		session(CLevelDB &swarmDb
+			, fingerprint const& print = fingerprint("LT" , LIBTORRENT_VERSION_MAJOR , LIBTORRENT_VERSION_MINOR, 0, 0) // @TODO twister has `TW` ID defined in `twister.cpp`
 			, int flags = start_default_features | add_default_plugins
 			, boost::uint32_t alert_mask = alert::error_notification
-			, char const* ext_ip = NULL, std::pair<int, int> listen_range = std::make_pair(0, 0)
-			TORRENT_LOGPATH_ARG_DEFAULT)
+			, std::pair<int, int> listen_range = std::make_pair(0, 0)
+			, const std::vector<std::string>& listen_interfaces = {}
+			, const std::vector<std::string>& ext_ips = {}
+			TORRENT_LOGPATH_ARG_DEFAULT
+			)
 		{
 			TORRENT_CFG();
-			init(swarmDb, listen_range, "0.0.0.0", print, alert_mask, ext_ip);
+			init(swarmDb, listen_range, print, alert_mask, listen_interfaces, ext_ips);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			set_log_path(logpath);
 #endif
 			start(flags);
 		}
-		session(CLevelDB &swarmDb, fingerprint const& print
+		session(CLevelDB &swarmDb
+			, fingerprint const& print
 			, std::pair<int, int> listen_port_range
-			, char const* listen_interface = "0.0.0.0"
 			, int flags = start_default_features | add_default_plugins
 			, int alert_mask = alert::error_notification
-			, char const* ext_ip = NULL
-			TORRENT_LOGPATH_ARG_DEFAULT)
-		{
+			, const std::vector<std::string>& listen_interfaces = {}
+			, const std::vector<std::string>& ext_ips = {}
+			TORRENT_LOGPATH_ARG_DEFAULT
+		) {
 			TORRENT_CFG();
 			TORRENT_ASSERT(listen_port_range.first > 0);
 			TORRENT_ASSERT(listen_port_range.first < listen_port_range.second);
-			init(swarmDb, listen_port_range, listen_interface, print, alert_mask, ext_ip);
+			init(swarmDb, listen_port_range, print, alert_mask, listen_interfaces, ext_ips);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			set_log_path(logpath);
 #endif
 			start(flags);
 		}
-			
+
 		// The destructor of session will notify all trackers that our torrents have been shut down.
 		// If some trackers are down, they will time out. All this before the destructor of session
 		// returns. So, it's advised that any kind of interface (such as windows) are closed before
@@ -197,10 +201,10 @@ namespace libtorrent
 		// loads and saves all session settings, including dht_settings, encryption settings and proxy
 		// settings. ``save_state`` writes all keys to the ``entry`` that's passed in, which needs to
 		// either not be initialized, or initialized as a dictionary.
-		// 
+		//
 		// ``load_state`` expects a ``lazy_entry`` which can be built from a bencoded buffer with
 		// `lazy_bdecode()`_.
-		// 
+		//
 		// The ``flags`` arguments passed in to ``save_state`` can be used to filter which parts
 		// of the session state to save. By default, all state is saved (except for the individual
 		// torrents). see save_state_flags_t
@@ -211,7 +215,7 @@ namespace libtorrent
 		// 	these calls are potentially expensive and won't scale well
 		// 	with lots of torrents. If you're concerned about performance, consider
 		// 	using ``post_torrent_updates()`` instead.
-		// 
+		//
 		// ``get_torrent_status`` returns a vector of the ``torrent_status`` for every
 		// torrent which satisfies ``pred``, which is a predicate function which determines
 		// if a torrent should be included in the returned set or not. Returning true means
@@ -219,7 +223,7 @@ namespace libtorrent
 		// as to ``torrent_handle::status()``. Since ``pred`` is guaranteed to be called for
 		// every torrent, it may be used to count the number of torrents of different categories
 		// as well.
-		// 
+		//
 		// ``refresh_torrent_status`` takes a vector of ``torrent_status`` structs (for instance
 		// the same vector that was returned by ``get_torrent_status()``) and refreshes the
 		// status based on the ``handle`` member. It is possible to use this function by
@@ -227,7 +231,7 @@ namespace libtorrent
 		// initializing the ``handle`` member, in order to request the torrent status for
 		// multiple torrents in a single call. This can save a significant amount of time
 		// if you have a lot of torrents.
-		// 
+		//
 		// Any ``torrent_status`` object whose ``handle`` member is not referring to a
 		// valid torrent are ignored.
 		void get_torrent_status(std::vector<torrent_status>* ret
@@ -239,7 +243,7 @@ namespace libtorrent
 		// This functions instructs the session to post the state_update_alert_, containing
 		// the status of all torrents whose state changed since the last time this function
 		// was called.
-		// 
+		//
 		// Only torrents who has the state subscription flag set will be included. This flag
 		// is on by default. See add_torrent_params_.
 		void post_torrent_updates();
@@ -249,9 +253,9 @@ namespace libtorrent
 		// ``find_torrent()`` looks for a torrent with the given info-hash. In case there
 		// is such a torrent in the session, a torrent_handle to that torrent is returned.
 		// In case the torrent cannot be found, an invalid torrent_handle is returned.
-		// 
+		//
 		// See ``torrent_handle::is_valid()`` to know if the torrent was found or not.
-		// 
+		//
 		// ``get_torrents()`` returns a vector of torrent_handles to all the torrents
 		// currently in the session.
 		torrent_handle find_torrent(sha1_hash const& info_hash) const;
@@ -264,12 +268,12 @@ namespace libtorrent
 		// consider using ``async_add_torrent()`` which returns immediately, without
 		// waiting for the torrent to add. Notification of the torrent being added is sent
 		// as add_torrent_alert_.
-		// 
+		//
 		// The overload that does not take an ``error_code`` throws an exception on
 		// error and is not available when building without exception support.
 		// The torrent_handle_ returned by ``add_torrent()`` can be used to retrieve information
 		// about the torrent's progress, its peers etc. It is also used to abort a torrent.
-		// 
+		//
 		// If the torrent you are trying to add already exists in the session (is either queued
 		// for checking, being checked or downloading) ``add_torrent()`` will throw
 		// libtorrent_exception_ which derives from ``std::exception`` unless ``duplicate_is_error``
@@ -282,7 +286,7 @@ namespace libtorrent
 #endif
 		torrent_handle add_torrent(add_torrent_params const& params, error_code& ec);
 		void async_add_torrent(add_torrent_params const& params);
-		
+
 #ifndef BOOST_NO_EXCEPTIONS
 #ifndef TORRENT_NO_DEPRECATE
 		// deprecated in 0.14
@@ -330,7 +334,7 @@ namespace libtorrent
 		// ``session_proxy`` destructor call. The ``session_proxy`` does not have any operations
 		// on it (since the session is being closed down, no operations are allowed on it). The
 		// only valid operation is calling the destructor::
-		// 
+		//
 		// 	class session_proxy
 		// 	{
 		// 	public:
@@ -388,30 +392,30 @@ namespace libtorrent
 		// available to torrents. The startup state is optional and can contain nodes
 		// and the node id from the previous session. The dht node state is a bencoded
 		// dictionary with the following entries:
-		// 
+		//
 		// nodes
 		// 	A list of strings, where each string is a node endpoint encoded in binary. If
 		// 	the string is 6 bytes long, it is an IPv4 address of 4 bytes, encoded in
 		// 	network byte order (big endian), followed by a 2 byte port number (also
 		// 	network byte order). If the string is 18 bytes long, it is 16 bytes of IPv6
 		// 	address followed by a 2 bytes port number (also network byte order).
-		// 
+		//
 		// node-id
 		// 	The node id written as a readable string as a hexadecimal number.
-		// 
+		//
 		// ``dht_state`` will return the current state of the dht node, this can be used
 		// to start up the node again, passing this entry to ``start_dht``. It is a good
 		// idea to save this to disk when the session is closed, and read it up again
 		// when starting.
-		// 
+		//
 		// If the port the DHT is supposed to listen on is already in use, and exception
 		// is thrown, ``asio::error``.
-		// 
+		//
 		// ``stop_dht`` stops the dht node.
-		// 
+		//
 		// ``add_dht_node`` adds a node to the routing table. This can be used if your
 		// client has its own source of bootstrapping nodes.
-		// 
+		//
 		// ``set_dht_settings`` sets some parameters availavle to the dht node. See
 		// dht_settings_ for more information.
 		//
@@ -425,13 +429,13 @@ namespace libtorrent
 		// ``add_dht_node`` takes a host name and port pair. That endpoint will be
 		// pinged, and if a valid DHT reply is received, the node will be added to
 		// the routing table.
-		// 
+		//
 		// ``add_dht_router`` adds the given endpoint to a list of DHT router nodes.
 		// If a search is ever made while the routing table is empty, those nodes will
 		// be used as backups. Nodes in the router node list will also never be added
 		// to the regular routing table, which effectively means they are only used
 		// for bootstrapping, to keep the load off them.
-		// 
+		//
 		// An example routing node that you could typically add is
 		// ``router.bittorrent.com``.
 		void add_dht_node(std::pair<std::string, int> const& node);
@@ -458,44 +462,44 @@ namespace libtorrent
 		// ``boost::shared_ptr<torrent_plugin>``. To write custom plugins, see
 		// `libtorrent plugins`_. For the typical bittorrent client all of these
 		// extensions should be added. The main plugins implemented in libtorrent are:
-		// 
+		//
 		// metadata extension
 		// 	Allows peers to download the metadata (.torren files) from the swarm
 		// 	directly. Makes it possible to join a swarm with just a tracker and
 		// 	info-hash.
-		// 
+		//
 		// ::
-		// 
+		//
 		// 	#include <libtorrent/extensions/metadata_transfer.hpp>
 		// 	ses.add_extension(&libtorrent::create_metadata_plugin);
-		// 
+		//
 		// uTorrent metadata
 		// 	Same as ``metadata extension`` but compatible with uTorrent.
-		// 
+		//
 		// ::
-		// 
+		//
 		// 	#include <libtorrent/extensions/ut_metadata.hpp>
 		// 	ses.add_extension(&libtorrent::create_ut_metadata_plugin);
-		// 
+		//
 		// uTorrent peer exchange
 		// 	Exchanges peers between clients.
-		// 
+		//
 		// ::
-		// 
+		//
 		// 	#include <libtorrent/extensions/ut_pex.hpp>
 		// 	ses.add_extension(&libtorrent::create_ut_pex_plugin);
-		// 
+		//
 		// smart ban plugin
 		// 	A plugin that, with a small overhead, can ban peers
 		// 	that sends bad data with very high accuracy. Should
 		// 	eliminate most problems on poisoned torrents.
-		// 
+		//
 		// ::
-		// 
+		//
 		// 	#include <libtorrent/extensions/smart_ban.hpp>
 		// 	ses.add_extension(&libtorrent::create_smart_ban_plugin);
-		// 
-		// 
+		//
+		//
 		// .. _`libtorrent plugins`: libtorrent_plugins.html
 		void add_extension(boost::function<boost::shared_ptr<torrent_plugin>(torrent*, void*)> ext);
 		void add_extension(boost::shared_ptr<plugin> ext);
@@ -503,12 +507,12 @@ namespace libtorrent
 		// These functions are not available if ``TORRENT_DISABLE_GEO_IP`` is defined. They
 		// expects a path to the `MaxMind ASN database`_ and `MaxMind GeoIP database`_
 		// respectively. This will be used to look up which AS and country peers belong to.
-		// 
+		//
 		// ``as_for_ip`` returns the AS number for the IP address specified. If the IP is not
 		// in the database or the ASN database is not loaded, 0 is returned.
-		// 
+		//
 		// The ``wchar_t`` overloads are for wide character paths.
-		// 
+		//
 		// .. _`MaxMind ASN database`: http://www.maxmind.com/app/asnum
 		// .. _`MaxMind GeoIP database`: http://www.maxmind.com/app/geolitecountry
 #ifndef TORRENT_DISABLE_GEO_IP
@@ -534,13 +538,13 @@ namespace libtorrent
 		// connections based on their originating ip address. The default filter will allow
 		// connections to any ip address. To build a set of rules for which addresses are
 		// accepted and not, see ip_filter_.
-		// 
+		//
 		// Each time a peer is blocked because of the IP filter, a peer_blocked_alert_ is
 		// generated.
 		// ``get_ip_filter()`` Returns the ip_filter currently in the session. See ip_filter_.
 		void set_ip_filter(ip_filter const& f);
 		ip_filter get_ip_filter() const;
-		
+
 		void set_port_filter(port_filter const& f);
 		void set_peer_id(peer_id const& pid);
 		void set_key(int key);
@@ -550,11 +554,11 @@ namespace libtorrent
 		// ``is_listening()`` will tell you whether or not the session has successfully
 		// opened a listening port. If it hasn't, this function will return false, and
 		// then you can use ``listen_on()`` to make another attempt.
-		// 
+		//
 		// ``listen_port()`` returns the port we ended up listening on. Since you just pass
 		// a port-range to the constructor and to ``listen_on()``, to know which port it
 		// ended up using, you have to ask the session using this function.
-		// 
+		//
 		// ``listen_on()`` will change the listen port and/or the listen interface. If the
 		// session is already listening on a port, this socket will be closed and a new socket
 		// will be opened with these new settings. The port range is the ports it will try
@@ -565,26 +569,26 @@ namespace libtorrent
 		// error code of the operation in ``ec``. If this indicates success, the session is
 		// listening on a port within the specified range. If it fails, it will also
 		// generate an appropriate alert (listen_failed_alert_).
-		// 
+		//
 		// If all ports in the specified range fails to be opened for listening, libtorrent will
 		// try to use port 0 (which tells the operating system to pick a port that's free). If
 		// that still fails you may see a listen_failed_alert_ with port 0 even if you didn't
 		// ask to listen on it.
-		// 
+		//
 		// It is possible to prevent libtorrent from binding to port 0 by passing in the flag
 		// ``session::no_system_port`` in the ``flags`` argument.
-		// 
+		//
 		// The interface parameter can also be a hostname that will resolve to the device you
 		// want to listen on. If you don't specify an interface, libtorrent may attempt to
 		// listen on multiple interfaces (typically 0.0.0.0 and ::). This means that if your
 		// IPv6 interface doesn't work, you may still see a listen_failed_alert_, even though
 		// the IPv4 port succeeded.
-		// 
+		//
 		// The ``flags`` parameter can either be 0 or ``session::listen_reuse_address``, which
 		// will set the reuse address socket option on the listen socket(s). By default, the
 		// listen socket does not use reuse address. If you're running a service that needs
 		// to run on a specific port no matter if it's in use, set this flag.
-		// 
+		//
 		// If you're also starting the DHT, it is a good idea to do that after you've called
 		// ``listen_on()``, since the default listen port for the DHT is the same as the tcp
 		// listen socket. If you start the DHT first, it will assume the tcp port is free and
@@ -594,9 +598,9 @@ namespace libtorrent
 		// called, the udp port will be rebound to the new port, if it was configured to use
 		// the same port as the tcp socket, and if the listen_on call failed to bind to the
 		// same port that the udp uses.
-		// 
+		//
 		// If you want the OS to pick a port for you, pass in 0 as both first and second.
-		// 
+		//
 		// The reason why it's a good idea to run the DHT and the bittorrent socket on the same
 		// port is because that is an assumption that may be used to increase performance. One
 		// way to accelerate the connecting of peers on windows may be to first ping all peers
@@ -763,14 +767,14 @@ namespace libtorrent
 		// ``pop_alert()`` is used to ask the session if any errors or events has occurred. With
 		// `set_alert_mask()`_ you can filter which alerts to receive through ``pop_alert()``.
 		// For information about the alert categories, see alerts_.
-		// 
+		//
 		// ``pop_alerts()`` pops all pending alerts in a single call. In high performance environments
 		// with a very high alert churn rate, this can save significant amount of time compared to
 		// popping alerts one at a time. Each call requires one round-trip to the network thread. If
 		// alerts are produced in a higher rate than they can be popped (when popped one at a time)
 		// it's easy to get stuck in an infinite loop, trying to drain the alert queue. Popping the entire
 		// queue at once avoids this problem.
-		// 
+		//
 		// However, the ``pop_alerts`` function comes with significantly more responsibility. You pass
 		// in an *empty* ``std::dequeue<alert*>`` to it. If it's not empty, all elements in it will
 		// be deleted and then cleared. All currently pending alerts are returned by being swapped
@@ -778,9 +782,9 @@ namespace libtorrent
 		// to the caller. This means you need to call delete for each item in the returned dequeue.
 		// It's probably a good idea to delete the alerts as you handle them, to save one extra
 		// pass over the dequeue.
-		// 
+		//
 		// Alternatively, you can pass in the same container the next time you call ``pop_alerts``.
-		// 
+		//
 		// ``wait_for_alert`` blocks until an alert is available, or for no more than ``max_wait``
 		// time. If ``wait_for_alert`` returns because of the time-out, and no alerts are available,
 		// it returns 0. If at least one alert was generated, a pointer to that alert is returned.
@@ -788,12 +792,12 @@ namespace libtorrent
 		// same pointer until the alert is popped by calling ``pop_alert``. This is useful for
 		// leaving any alert dispatching mechanism independent of this blocking call, the dispatcher
 		// can be called and it can pop the alert independently.
-		// 
+		//
 		// In the python binding, ``wait_for_alert`` takes the number of milliseconds to wait as an integer.
-		// 
+		//
 		// To control the max number of alerts that's queued by the session, see
 		// ``session_settings::alert_queue_size``.
-		// 
+		//
 		// ``save_resume_data_alert`` and ``save_resume_data_failed_alert`` are always posted, regardelss
 		// of the alert mask.
 		std::unique_ptr<alert> pop_alert();
@@ -817,7 +821,7 @@ namespace libtorrent
 		// This sets a function to be called (from within libtorrent's netowrk thread) every time an alert
 		// is posted. Since the function (``fun``) is run in libtorrent's internal thread, it may not call
 		// any of libtorrent's external API functions. Doing so results in a dead lock.
-		// 
+		//
 		// The main intention with this function is to support integration with platform-dependent message
 		// queues or signalling systems. For instance, on windows, one could post a message to an HNWD or
 		// on linux, write to a pipe or an eventfd.
@@ -835,32 +839,38 @@ namespace libtorrent
 
 		// Starts and stops the UPnP service. When started, the listen port and the DHT
 		// port are attempted to be forwarded on local UPnP router devices.
-		// 
+		//
 		// The upnp object returned by ``start_upnp()`` can be used to add and remove
 		// arbitrary port mappings. Mapping status is returned through the
 		// portmap_alert_ and the portmap_error_alert_. The object will be valid until
 		// ``stop_upnp()`` is called. See `UPnP and NAT-PMP`_.
-		// 
+		//
 		// It is off by default.
  		void start_upnp();
 		void stop_upnp();
 
 		// Starts and stops the NAT-PMP service. When started, the listen port and the DHT
 		// port are attempted to be forwarded on the router through NAT-PMP.
-		// 
+		//
 		// The natpmp object returned by ``start_natpmp()`` can be used to add and remove
 		// arbitrary port mappings. Mapping status is returned through the
 		// portmap_alert_ and the portmap_error_alert_. The object will be valid until
 		// ``stop_natpmp()`` is called. See `UPnP and NAT-PMP`_.
-		// 
+		//
 		// It is off by default.
 		void start_natpmp();
 		void stop_natpmp();
-		
+
 	private:
 
-		void init(CLevelDB &swarmDb, std::pair<int, int> listen_range, char const* listen_interface
-			, fingerprint const& id, boost::uint32_t alert_mask, char const* ext_ip);
+		void init(
+			CLevelDB &swarmDb,
+			std::pair<int, int> listen_range,
+			fingerprint const& id,
+			boost::uint32_t alert_mask,
+			const std::vector<std::string>& listen_interfaces = {},
+			const std::vector<std::string>& ext_ips = {}
+		);
 		void set_log_path(std::string const& p);
 		void start(int flags);
 
@@ -872,4 +882,3 @@ namespace libtorrent
 }
 
 #endif // TORRENT_SESSION_HPP_INCLUDED
-

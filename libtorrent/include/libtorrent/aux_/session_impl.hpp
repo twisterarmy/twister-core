@@ -217,9 +217,9 @@ namespace libtorrent
 			session_impl(CLevelDB &swarmDb,
 				std::pair<int, int> listen_port_range
 				, fingerprint const& cl_fprint
-				, char const* listen_interface
 				, boost::uint32_t alert_mask
-				, char const* ext_ip);
+				, const std::vector<std::string>& listen_interfaces = {}
+				, const std::vector<std::string>& ext_ips = {});
 			virtual ~session_impl();
 			void update_dht_announce_interval();
 			void init();
@@ -255,12 +255,6 @@ namespace libtorrent
 			// need the initial push to connect peers
 			void prioritize_connections(boost::weak_ptr<torrent> t);
 
-			// if we are listening on an IPv6 interface
-			// this will return one of the IPv6 addresses on this
-			// machine, otherwise just an empty endpoint
-			tcp::endpoint get_ipv6_interface() const;
-			tcp::endpoint get_ipv4_interface() const;
-
 			void async_accept(boost::shared_ptr<socket_acceptor> const& listener, bool ssl);
 			void on_accept_connection(boost::shared_ptr<socket_type> const& s
 				, boost::weak_ptr<socket_acceptor> listener, error_code const& e, bool ssl);
@@ -268,7 +262,7 @@ namespace libtorrent
 				, error_code const& e);
 
 			void incoming_connection(boost::shared_ptr<socket_type> const& s);
-		
+
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			bool is_network_thread() const
 			{
@@ -295,7 +289,7 @@ namespace libtorrent
 			void set_settings(session_settings const& s);
 			session_settings const& settings() const { return m_settings; }
 
-#ifndef TORRENT_DISABLE_DHT	
+#ifndef TORRENT_DISABLE_DHT
 			void add_dht_node_name(std::pair<std::string, int> const& node);
 			void add_dht_node(udp::endpoint n);
 			void add_dht_router(std::pair<std::string, int> const& node);
@@ -349,7 +343,7 @@ namespace libtorrent
 
 			void set_ip_filter(ip_filter const& f);
 			ip_filter const& get_ip_filter() const;
-			
+
 			void set_port_filter(port_filter const& f);
 
 			void  listen_on(
@@ -374,7 +368,7 @@ namespace libtorrent
 			void post_torrent_updates();
 
 			std::vector<torrent_handle> get_torrents() const;
-			
+
 			void queue_check_torrent(boost::shared_ptr<torrent> const& t);
 			void dequeue_check_torrent(boost::shared_ptr<torrent> const& t);
 
@@ -420,9 +414,9 @@ namespace libtorrent
 			address listen_address() const;
 			boost::uint16_t listen_port() const;
 			boost::uint16_t ssl_listen_port() const;
-			
+
 			void abort();
-			
+
 			torrent_handle find_torrent_handle(sha1_hash const& info_hash);
 
 			void announce_lsd(sha1_hash const& ih, int port, bool broadcast = false);
@@ -617,7 +611,7 @@ namespace libtorrent
 					--allocations;
 					return ::free(block);
 				}
-			
+
 				static int allocations;
 				static int allocated_bytes;
 			};
@@ -747,13 +741,13 @@ namespace libtorrent
 			// object. It is the complete list of all connected
 			// peers.
 			connection_map m_connections;
-			
+
 			// filters incoming connections
 			ip_filter m_ip_filter;
 
 			// filters outgoing connections
 			port_filter m_port_filter;
-			
+
 			// the peer id that is generated at the start of the session
 			peer_id m_peer_id;
 
@@ -767,19 +761,10 @@ namespace libtorrent
 			// is incremented by one
 			int m_listen_port_retries;
 
-			// the ip-address of the interface
+			// the ip-addresses of the interface
 			// we are supposed to listen on.
-			// if the ip is set to zero, it means
-			// that we should let the os decide which
-			// interface to listen on
-			tcp::endpoint m_listen_interface;
+			std::vector<tcp::endpoint> m_listen_interfaces;
 
-			// if we're listening on an IPv6 interface
-			// this is one of the non local IPv6 interfaces
-			// on this machine
-			tcp::endpoint m_ipv6_interface;
-			tcp::endpoint m_ipv4_interface;
-			
 			// since we might be listening on multiple interfaces
 			// we might need more than one listen socket
 			std::list<listen_socket_t> m_listen_sockets;
@@ -806,7 +791,7 @@ namespace libtorrent
 			// the proxy used for bittorrent
 			proxy_settings m_proxy;
 
-#ifndef TORRENT_DISABLE_DHT	
+#ifndef TORRENT_DISABLE_DHT
 			entry m_dht_state;
 #endif
 			// set to true when the session object
@@ -872,7 +857,7 @@ namespace libtorrent
 			// this is used to know if the client is behind
 			// NAT or not.
 			bool m_incoming_connection;
-			
+
 			void on_disk_queue();
 			void on_tick(error_code const& e);
 
@@ -912,7 +897,7 @@ namespace libtorrent
 #ifndef TORRENT_DISABLE_DHT
 			boost::intrusive_ptr<dht::dht_tracker> m_dht;
 			dht_settings m_dht_settings;
-			
+
 			// these are used when starting the DHT
 			// (and bootstrapping it), and then erased
 			std::list<udp::endpoint> m_dht_router_nodes;
@@ -1046,7 +1031,7 @@ namespace libtorrent
 
 			// the last time we rotated the log file
 			ptime m_last_log_rotation;
-	
+
 			// logger used to write bandwidth usage statistics
 			FILE* m_stats_logger;
 			// sequence number for log file. Log files are
@@ -1146,7 +1131,7 @@ namespace libtorrent
 			// the number of torrents that have apply_ip_filter
 			// set to false. This is typically 0
 			int m_non_filtered_torrents;
-			
+
 			// hashcash PEEK
 			int m_hashcash_nbits;
 			int m_hashcash_reqs;
@@ -1154,7 +1139,7 @@ namespace libtorrent
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			boost::shared_ptr<logger> create_log(std::string const& name
 				, int instance, bool append = true);
-			
+
 			void session_log(char const* fmt, ...) const;
 
 			// this list of tracker loggers serves as tracker_callbacks when
@@ -1203,7 +1188,7 @@ namespace libtorrent
 			// there should never be more than a single pending auto-manage
 			// message in-flight at any given time.
 			bool m_pending_auto_manage;
-			
+
 			// this is also set to true when triggering an auto-manage
 			// of the torrents. However, if the normal auto-manage
 			// timer comes along and executes the auto-management,
@@ -1227,7 +1212,7 @@ namespace libtorrent
 			pthread_t m_network_thread;
 #endif
 		};
-		
+
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 		struct tracker_logger : request_callback
 		{
@@ -1242,7 +1227,7 @@ namespace libtorrent
 				, int min_interval
 				, int complete
 				, int incomplete
-				, int downloaded 
+				, int downloaded
 				, address const& external_ip
 				, std::string const& tracker_id);
 			void tracker_request_timed_out(
@@ -1260,4 +1245,3 @@ namespace libtorrent
 
 
 #endif
-

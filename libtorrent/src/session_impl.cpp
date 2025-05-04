@@ -602,9 +602,9 @@ namespace aux {
 	session_impl::session_impl(CLevelDB &swarmDb,
 		std::pair<int, int> listen_port_range
 		, fingerprint const& cl_fprint
-		, char const* listen_interface
 		, boost::uint32_t alert_mask
-		, char const* ext_ip
+		, const std::vector<std::string>& listen_interfaces
+		, const std::vector<std::string>& ext_ips
 		)
 		: m_ipv4_peer_pool(500)
 #if TORRENT_USE_IPV6
@@ -716,14 +716,31 @@ namespace aux {
 			fprintf(stderr, "failed to open request log file: (%d) %s\n", errno, strerror(errno));
 		}
 #endif
+		// init interfaces to bind on
+		for (const auto& listen_interface : listen_interfaces)
+		{
+			error_code ec;
+			m_listen_interfaces.push_back(
+				tcp::endpoint(address::from_string(listen_interface, ec), listen_port_range.first)
+			);
+			TORRENT_ASSERT_VAL(!ec, ec);
+		}
+		// if the interfaces are still empty (which usually means the `-bind` option is not provided),
+		// use all interfaces by default.
+		if (m_listen_interfaces.empty()) {
+			// IPv4
+			m_listen_interfaces.push_back(
+				tcp::endpoint(address_v4::any(), listen_port_range.first)
+			);
+			// IPv6
+			m_listen_interfaces.push_back(
+				tcp::endpoint(address_v6::any(), listen_port_range.first)
+			);
+		}
 
-		error_code ec;
-		if (!listen_interface) listen_interface = "0.0.0.0";
-		m_listen_interface = tcp::endpoint(address::from_string(listen_interface, ec), listen_port_range.first);
-		TORRENT_ASSERT_VAL(!ec, ec);
-
-		if (ext_ip) {
+		for (const auto& ext_ip : ext_ips) {
 			m_external_ip.cast_vote(address::from_string(ext_ip), source_router, address());
+			break; // @TODO handle multiple values?
 		}
 
 		// ---- generate a peer id ----
@@ -2144,16 +2161,6 @@ namespace aux {
 			*i = ' ';
 	}
 
-	tcp::endpoint session_impl::get_ipv6_interface() const
-	{
-		return m_ipv6_interface;
-	}
-
-	tcp::endpoint session_impl::get_ipv4_interface() const
-	{
-		return m_ipv4_interface;
-	}
-
 	void session_impl::setup_listener(listen_socket_t* s, tcp::endpoint ep
 		, int& retries, bool v6_only, int flags, error_code& ec)
 	{
@@ -2290,21 +2297,19 @@ retry:
 
 		if (m_abort) return;
 
-		m_ipv6_interface = tcp::endpoint();
-		m_ipv4_interface = tcp::endpoint();
-
 #ifdef TORRENT_USE_OPENSSL
-		tcp::endpoint ssl_interface = m_listen_interface;
-		ssl_interface.port(m_settings.ssl_listen);
+		/* @TODO
+		std::vector<tcp::endpoint> ssl_interfaces;
+		for (const auto& m_listen_interface: m_listen_interfaces) {
+			ssl_interfaces.push_back(
+				tcp::endpoint(m_listen_interface.address(), m_settings.ssl_listen)
+			);
+		}*/
 #endif
 
-		if (is_any(m_listen_interface.address()))
-		{
-			// this means we should open two listen sockets
-			// one for IPv4 and one for IPv6
-
+		for (auto& m_listen_interface: m_listen_interfaces) {
 			listen_socket_t s;
-			setup_listener(&s, tcp::endpoint(address_v4::any(), m_listen_interface.port())
+			setup_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port())
 				, m_listen_port_retries, false, flags, ec);
 
 			if (s.sock)
@@ -2319,6 +2324,7 @@ retry:
 			}
 
 #ifdef TORRENT_USE_OPENSSL
+			/* @TODO
 			if (m_settings.ssl_listen)
 			{
 				listen_socket_t s;
@@ -2331,112 +2337,35 @@ retry:
 					TORRENT_ASSERT(!m_abort);
 					m_listen_sockets.push_back(s);
 				}
-			}
-#endif
-
-#if TORRENT_USE_IPV6
-			// only try to open the IPv6 port if IPv6 is installed
-			if (supports_ipv6())
-			{
-				setup_listener(&s, tcp::endpoint(address_v6::any(), m_listen_interface.port())
-					, m_listen_port_retries, true, flags, ec);
-
-				if (s.sock)
-				{
-					TORRENT_ASSERT(!m_abort);
-					m_listen_sockets.push_back(s);
-				}
-
-#ifdef TORRENT_USE_OPENSSL
-				if (m_settings.ssl_listen)
-				{
-					listen_socket_t s;
-					s.ssl = true;
-					int retries = 10;
-					setup_listener(&s, tcp::endpoint(address_v6::any(), ssl_interface.port())
-						, retries, false, flags, ec);
-
-					if (s.sock)
-					{
-						TORRENT_ASSERT(!m_abort);
-						m_listen_sockets.push_back(s);
-					}
-				}
-#endif // TORRENT_USE_OPENSSL
-			}
-#endif // TORRENT_USE_IPV6
-
-			// set our main IPv4 and IPv6 interfaces
-			// used to send to the tracker
-			std::vector<ip_interface> ifs = enum_net_interfaces(m_io_service, ec);
-			for (std::vector<ip_interface>::const_iterator i = ifs.begin()
-					, end(ifs.end()); i != end; ++i)
-			{
-				address const& addr = i->interface_address;
-				if (addr.is_v6() && !is_local(addr) && !is_loopback(addr))
-					m_ipv6_interface = tcp::endpoint(addr, m_listen_interface.port());
-				else if (addr.is_v4() && !is_local(addr) && !is_loopback(addr))
-					m_ipv4_interface = tcp::endpoint(addr, m_listen_interface.port());
-			}
-		}
-		else
-		{
-			// we should only open a single listen socket, that
-			// binds to the given interface
-
-			listen_socket_t s;
-			setup_listener(&s, m_listen_interface, m_listen_port_retries, false, flags, ec);
-
-			if (s.sock)
-			{
-				TORRENT_ASSERT(!m_abort);
-				m_listen_sockets.push_back(s);
-
-				if (m_listen_interface.address().is_v6())
-					m_ipv6_interface = m_listen_interface;
-				else
-					m_ipv4_interface = m_listen_interface;
-			}
-
-#ifdef TORRENT_USE_OPENSSL
-			if (m_settings.ssl_listen)
-			{
-				listen_socket_t s;
-				s.ssl = true;
-				int retries = 10;
-				setup_listener(&s, ssl_interface, retries, false, flags, ec);
-
-				if (s.sock)
-				{
-					TORRENT_ASSERT(!m_abort);
-					m_listen_sockets.push_back(s);
-				}
-			}
+			}*/
 #endif
 		}
 
-		m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.port()), ec);
+		// this one is harder to multibind as has no shared `setup_listener` implementation + uses single header members @TODO
+		const auto& _interface_donor = m_listen_interfaces[0]; // keep in mind that we are using hardcoded [0] as expected by app logic above
+		m_udp_socket.bind(udp::endpoint(_interface_donor.address(), _interface_donor.port()), ec);
 		if (ec)
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			session_log("cannot bind to UDP interface \"%s\": %s"
-				, print_endpoint(m_listen_interface).c_str(), ec.message().c_str());
+				, print_endpoint(_interface_donor).c_str(), ec.message().c_str());
 #endif
 			if (m_listen_port_retries > 0)
 			{
-				m_listen_interface.port(m_listen_interface.port() + 1);
+				// @TODO multibind, const overwrite
+				//_interface_donor.port(_interface_donor.port() + 1);
 				--m_listen_port_retries;
 				goto retry;
 			}
 			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(m_listen_interface
+				m_alerts.post_alert(listen_failed_alert(_interface_donor
 					, listen_failed_alert::bind, ec));
 		}
 		else
 		{
 			m_external_udp_port = m_udp_socket.local_port();
-			maybe_update_udp_mapping(0, m_listen_interface.port(), m_listen_interface.port());
-			maybe_update_udp_mapping(1, m_listen_interface.port(), m_listen_interface.port());
+			maybe_update_udp_mapping(0, _interface_donor.port(), _interface_donor.port());
+			maybe_update_udp_mapping(1, _interface_donor.port(), _interface_donor.port());
 		}
 
 		m_udp_socket.set_option(type_of_service(m_settings.peer_tos), ec);
@@ -2513,7 +2442,7 @@ retry:
 #endif
 		socks5_stream& s = *m_socks_listen_socket->get<socks5_stream>();
 		s.set_command(2); // 2 means BIND (as opposed to CONNECT)
-		m_socks_listen_port = m_listen_interface.port();
+		m_socks_listen_port = m_listen_interfaces[0].port(); // @TODO multibind or shared port member
 		if (m_socks_listen_port == 0) m_socks_listen_port = 2000 + random() % 60000;
 		s.async_connect(tcp::endpoint(address_v4::any(), m_socks_listen_port)
 			, boost::bind(&session_impl::on_socks_accept, this, m_socks_listen_socket, _1));
@@ -2542,7 +2471,7 @@ retry:
 		i2p_stream& s = *m_i2p_listen_socket->get<i2p_stream>();
 		s.set_command(i2p_stream::cmd_accept);
 		s.set_session_id(m_i2p_conn.session_id());
-		s.async_connect(tcp::endpoint(address_v4::any(), m_listen_interface.port())
+		s.async_connect(tcp::endpoint(address_v4::any(), m_listen_interfaces[0].port()) // @TODO multibind or shared port member
 			, boost::bind(&session_impl::on_i2p_accept, this, m_i2p_listen_socket, _1));
 	}
 
@@ -2558,10 +2487,12 @@ retry:
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(tcp::endpoint(
-					address_v4::any(), m_listen_interface.port()), listen_failed_alert::accept, e));
+					address_v4::any(), m_listen_interfaces[0].port()  // @TODO multibind or shared port member
+				), listen_failed_alert::accept, e));
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			session_log("cannot bind to port %d: %s"
-				, m_listen_interface.port(), e.message().c_str());
+				, m_listen_interfaces[0].port(),  // @TODO multibind or shared port member
+				e.message().c_str());
 #endif
 			return;
 		}
@@ -2950,7 +2881,8 @@ retry:
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(tcp::endpoint(
-					address_v4::any(), m_listen_interface.port()), listen_failed_alert::accept, e));
+					address_v4::any(), m_listen_interfaces[0].port() // @TODO multibind or shared port member
+				), listen_failed_alert::accept, e));
 			return;
 		}
 		open_new_incoming_socks_connection();
@@ -5261,7 +5193,7 @@ retry:
 			if (pos >= queue_pos) queue_pos = pos + 1;
 		}
 
-		torrent_ptr.reset(new torrent(*this, m_listen_interface
+		torrent_ptr.reset(new torrent(*this, m_listen_interfaces[0] // @TODO multibind or shared port member
 			, 16 * 1024, queue_pos, params, *ih));
 		torrent_ptr->start();
 
@@ -5466,11 +5398,15 @@ retry:
 
 		// if the interface is the same and the socket is open
 		// don't do anything
-		if (new_interface == m_listen_interface
-			&& !m_listen_sockets.empty())
-			return;
+		for (const auto& m_listen_interface: m_listen_interfaces)
+		{
+			if (new_interface == m_listen_interface && !m_listen_sockets.empty())
+				return;
+		}
 
-		m_listen_interface = new_interface;
+		m_listen_interfaces.push_back(
+			new_interface
+		);
 
 		open_listen_port(flags, ec);
 
@@ -6200,7 +6136,7 @@ retry:
 		if (m_lsd) return;
 
 		m_lsd = new lsd(m_io_service
-			, m_listen_interface.address()
+			, m_listen_interfaces[0].address() // @TODO complete multibind feature
 			, boost::bind(&session_impl::on_lsd_peer, this, _1, _2));
 	}
 
@@ -6213,7 +6149,7 @@ retry:
 		// the natpmp constructor may fail and call the callbacks
 		// into the session_impl.
 		natpmp* n = new (std::nothrow) natpmp(m_io_service
-			, m_listen_interface.address()
+			, m_listen_interfaces[0].address() // @TODO complete multibind feature
 			, boost::bind(&session_impl::on_port_mapping
 				, this, _1, _2, _3, _4, 0)
 			, boost::bind(&session_impl::on_port_map_log
@@ -6222,14 +6158,15 @@ retry:
 
 		m_natpmp = n;
 
-		if (m_listen_interface.port() > 0)
+		const int _port = m_listen_interfaces[0].port(); // @TODO complete multibind feature
+		if (_port > 0)
 		{
-			remap_tcp_ports(1, m_listen_interface.port(), ssl_listen_port());
+			remap_tcp_ports(1, _port, ssl_listen_port());
 		}
 		if (m_udp_socket.is_open())
 		{
 			m_udp_mapping[0] = m_natpmp->add_mapping(natpmp::udp
-				, m_listen_interface.port(), m_listen_interface.port());
+				, _port, _port);
 		}
 		return n;
 	}
@@ -6243,7 +6180,7 @@ retry:
 		// the upnp constructor may fail and call the callbacks
 		upnp* u = new (std::nothrow) upnp(m_io_service
 			, m_half_open
-			, m_listen_interface.address()
+			, m_listen_interfaces[0].address() // @TODO complete multibind feature
 			, m_settings.user_agent
 			, boost::bind(&session_impl::on_port_mapping
 				, this, _1, _2, _3, _4, 1)
@@ -6256,14 +6193,14 @@ retry:
 		m_upnp = u;
 
 		m_upnp->discover_device();
-		if (m_listen_interface.port() > 0 || ssl_listen_port() > 0)
+		const int _port = m_listen_interfaces[0].port(); // @TODO complete multibind feature
+		if (_port > 0 || ssl_listen_port() > 0)
 		{
-			remap_tcp_ports(2, m_listen_interface.port(), ssl_listen_port());
+			remap_tcp_ports(2, _port, ssl_listen_port());
 		}
 		if (m_udp_socket.is_open())
 		{
-			m_udp_mapping[1] = m_upnp->add_mapping(upnp::udp
-				, m_listen_interface.port(), m_listen_interface.port());
+			m_udp_mapping[1] = m_upnp->add_mapping(upnp::udp , _port, _port);
 		}
 		return u;
 	}

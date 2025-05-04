@@ -165,7 +165,7 @@ namespace libtorrent
 
 		// disallow the buffer size to grow for the uTP socket
 		set.utp_dynamic_sock_buf = false;
-		
+
 		// max 'bottled' http receive buffer/url torrent size
 		set.max_http_recv_buffer_size = 1024 * 1024;
 
@@ -409,9 +409,14 @@ namespace libtorrent
 	{ throw; }
 #endif
 
-	void session::init(CLevelDB &swarmDb, std::pair<int, int> listen_range, char const* listen_interface
-		, fingerprint const& id, boost::uint32_t alert_mask, char const* ext_ip)
-	{
+	void session::init(
+		CLevelDB &swarmDb,
+		std::pair<int, int> listen_range,
+		fingerprint const& id,
+		boost::uint32_t alert_mask,
+		const std::vector<std::string>& listen_interfaces,
+		const std::vector<std::string>& ext_ips
+	) {
 #if defined _MSC_VER && defined TORRENT_DEBUG
 		// workaround for microsofts
 		// hardware exceptions that makes
@@ -419,7 +424,7 @@ namespace libtorrent
 		::_set_se_translator(straight_to_debugger);
 #endif
 
-		m_impl.reset(new session_impl(swarmDb, listen_range, id, listen_interface, alert_mask, ext_ip));
+		m_impl.reset(new session_impl(swarmDb, listen_range, id, alert_mask, listen_interfaces, ext_ips));
 
 #ifdef TORRENT_MEMDEBUG
 		start_malloc_debug();
@@ -579,7 +584,7 @@ namespace libtorrent
 	{
 		TORRENT_ASYNC_CALL1(set_ip_filter, f);
 	}
-	
+
 	ip_filter session::get_ip_filter() const
 	{
 		TORRENT_SYNC_CALL_RET(ip_filter, get_ip_filter);
@@ -595,7 +600,7 @@ namespace libtorrent
 	{
 		TORRENT_ASYNC_CALL1(set_peer_id, id);
 	}
-	
+
 	peer_id session::id() const
 	{
 		TORRENT_SYNC_CALL_RET(peer_id, get_peer_id);
@@ -635,7 +640,7 @@ namespace libtorrent
 		TORRENT_SYNC_CALL_RET(std::vector<torrent_handle>, get_torrents);
 		return r;
 	}
-	
+
 	torrent_handle session::find_torrent(sha1_hash const& info_hash) const
 	{
 		TORRENT_SYNC_CALL_RET1(torrent_handle, find_torrent_handle, info_hash);
@@ -842,7 +847,7 @@ namespace libtorrent
 #endif
 	}
 #endif // TORRENT_NO_DEPRECATE
-	
+
 	void session::add_dht_node(std::pair<std::string, int> const& node)
 	{
 #ifndef TORRENT_DISABLE_DHT
@@ -990,7 +995,7 @@ namespace libtorrent
 	{
 		TORRENT_ASYNC_CALL1(set_i2p_proxy, s);
 	}
-	
+
 	proxy_settings session::i2p_proxy() const
 	{
 		TORRENT_SYNC_CALL_RET(proxy_settings, i2p_proxy);
@@ -1156,32 +1161,32 @@ namespace libtorrent
 	{
 		TORRENT_ASYNC_CALL(start_lsd);
 	}
-	
+
 	void session::start_natpmp()
 	{
 		TORRENT_ASYNC_CALL(start_natpmp);
 	}
-	
+
 	void session::start_upnp()
 	{
 		TORRENT_ASYNC_CALL(start_upnp);
 	}
-	
+
 	void session::stop_lsd()
 	{
 		TORRENT_ASYNC_CALL(stop_lsd);
 	}
-	
+
 	void session::stop_natpmp()
 	{
 		TORRENT_ASYNC_CALL(stop_natpmp);
 	}
-	
+
 	void session::stop_upnp()
 	{
 		TORRENT_ASYNC_CALL(stop_upnp);
 	}
-	
+
 	connection_queue& session::get_connection_queue()
 	{
 		return m_impl->m_half_open;
@@ -1376,4 +1381,3 @@ namespace libtorrent
 
 	session_settings::~session_settings() {}
 }
-

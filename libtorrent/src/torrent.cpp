@@ -79,6 +79,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/gzip.hpp" // for inflate_gzip
 #include "libtorrent/random.hpp"
 #include "libtorrent/string_util.hpp" // for allocate_string_copy
+#include "libtorrent/network.hpp"
 
 #ifdef TORRENT_USE_OPENSSL
 #include "libtorrent/ssl_stream.hpp"
@@ -2233,9 +2234,9 @@ namespace libtorrent
 		req.event = e;
 		error_code ec;
 
-		req.ip.push_back(
-			is_any(bind_interface) ? m_ses.m_listen_interface.address() : bind_interface
-		); // @TODO PR#20
+		for (const auto& m_listen_interface: m_ses.m_listen_interfaces) {
+			req.ip.push_back(m_listen_interface.address());
+		}
 
 		// since sending our IPv4/v6 address to the tracker may be sensitive. Only
 		// do that if we're not in anonymous mode and if it's a private torrent
@@ -2415,7 +2416,10 @@ namespace libtorrent
 		req.info_hash = m_torrent_file->info_hash();
 		req.kind = tracker_request::scrape_request;
 		req.url = m_trackers[i].url;
-		req.ip.push_back(m_ses.m_listen_interface.address()); // @TODO PR#20
+		for (auto const& m_listen_interface : m_ses.m_listen_interfaces)
+		{
+			req.ip.push_back(m_listen_interface.address());
+		}
 		m_ses.m_tracker_manager.queue_request(m_ses.m_io_service, m_ses.m_half_open, req
 			, tracker_login(), shared_from_this());
 	}
@@ -2632,30 +2636,24 @@ namespace libtorrent
 		// matches one of the listen interfaces, since that means this
 		// announce was the second one
 		// don't connect twice just to tell it we're stopping
-
-		if (((!is_any(m_ses.m_ipv6_interface.address()) && tracker_ip.is_v4())
-			|| (!is_any(m_ses.m_ipv4_interface.address()) && tracker_ip.is_v6()))
-			// @TODO PR#20
-			//&& r.bind_ip != m_ses.m_ipv4_interface.address()
-			//&& r.bind_ip != m_ses.m_ipv6_interface.address()
-			&& r.event != tracker_request::stopped)
+		for (auto const& m_listen_interface : m_ses.m_listen_interfaces)
 		{
-			std::list<address>::const_iterator i = std::find_if(tracker_ips.begin()
-				, tracker_ips.end(), boost::bind(&address::is_v4, _1) != tracker_ip.is_v4());
-			if (i != tracker_ips.end())
-			{
-				// the tracker did resolve to a different type of address, so announce
-				// to that as well
+			auto a = m_listen_interface.address(); // allocate memory once
 
-				// tell the tracker to bind to the opposite protocol type
-				address bind_interface = tracker_ip.is_v4()
-					?m_ses.m_ipv6_interface.address()
-					:m_ses.m_ipv4_interface.address();
-				announce_with_tracker(r.event, bind_interface);
+			if (/*a != r.bind_ip &&*/ r.event != tracker_request::stopped && is_connectable(a, tracker_ip))
+			{
+				if (is_any(tracker_ip)) {
+					// use a = -externalip
+				} // @TODO
+
+				if (std::find(tracker_ips.begin(), tracker_ips.end(), a) != tracker_ips.end())
+				{
+					announce_with_tracker(r.event, a);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
-				debug_log("announce again using %s as the bind interface"
-					, print_address(bind_interface).c_str());
+					debug_log("announce again using %s as the bind interface"
+						, print_address(a).c_str());
 #endif
+				}
 			}
 		}
 

@@ -305,16 +305,29 @@ void ThreadWaitExtIP()
 {
     SimpleThreadCounter threadCounter(&cs_twister, &m_threadsToJoin, "wait-extip");
 
-    std::string ipStr;
     // wait up to 10 seconds for bitcoin to get the external IP
-    for( int i = 0; i < 20; i++ ) {
-        const CNetAddr paddrPeer("8.8.8.8");
-        CAddress addr( GetLocalAddress(&paddrPeer) );
-        if( addr.IsValid() ) {
-            ipStr = addr.ToStringIP();
-            break;
+    if (!mapArgs.count("-externalip"))
+    {
+        // IPv4
+        for( int i = 0; i < 20; i++ ) {
+            const CNetAddr paddrPeer("8.8.8.8"); // @TODO CloudFlare `1.1.1.1` or an option?
+            CAddress addr( GetLocalAddress(&paddrPeer) );
+            if( addr.IsValid() ) {
+                mapMultiArgs["-externalip"].push_back(addr.ToStringIP());
+                break;
+            }
+            MilliSleep(500);
         }
-        MilliSleep(500);
+        // IPv6
+        for( int i = 0; i < 20; i++ ) {
+            const CNetAddr paddrPeer("2001:4860:4860::64");
+            CAddress addr( GetLocalAddress(&paddrPeer) );
+            if( addr.IsValid() ) {
+                mapMultiArgs["-externalip"].push_back(addr.ToStringIP());
+                break;
+            }
+            MilliSleep(500);
+        }
     }
 
     libtorrent::error_code ec; // libtorrent::error_code == boost::system::error_code
@@ -327,34 +340,29 @@ void ThreadWaitExtIP()
     m_swarmDb.reset(new CLevelDB(swarmDbPath.string(), 256*1024, false, false));
 
     int listen_port = GetListenPort() + LIBTORRENT_PORT_OFFSET;
-    std::string bind_to_interface = "";
-    if (mapArgs.count("-bind")) { // respect bind address and family for DHT services (#254)
-        BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
-            CService addrBind;
-            // the binding address should be valid at this point, as checked in the `init.cpp` step,
-            // just let's ensure this by adding an additional `Lookup` validation
-            if (IsBindValid(strBind))
-                if (Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
-                    bind_to_interface = strBind.c_str();
-                else printf("Cannot resolve -bind address: '%s', using default interface.", strBind.c_str());
-            else printf("The -bind address format '%s' is invalid!", strBind.c_str());
-            // we are using only the first value (if there are multiple `-bind` options),
-            // the application behavior may require a separate option for these needs @TODO
-            break;
-        }
-    }
+
     proxyType proxyInfoOut;
     m_usingProxy = GetProxy(NET_IPV4, proxyInfoOut);
 
-    printf("Creating new libtorrent session ext_ip=%s port=%d proxy=%s\n",
-           ipStr.c_str(), !m_usingProxy ? listen_port : 0,
+    printf("Creating new libtorrent session port=%d proxy=%s\nExternal IP:\n",
+           !m_usingProxy ? listen_port : 0,
            m_usingProxy ? proxyInfoOut.first.ToStringIPPort().c_str() : "");
 
-    m_ses.reset(new session(*m_swarmDb, fingerprint("TW", LIBTORRENT_VERSION_MAJOR, LIBTORRENT_VERSION_MINOR, 0, 0)
+    if (mapArgs.count("-externalip"))
+        for (const auto& ip : mapMultiArgs["-externalip"])
+            printf("%s\n", ip.c_str());
+
+    m_ses.reset(
+        new session(
+            *m_swarmDb
+            , fingerprint("TW", LIBTORRENT_VERSION_MAJOR, LIBTORRENT_VERSION_MINOR, 0, 0)
             , session::add_default_plugins
             , alert::dht_notification | alert::status_notification
-            , ipStr.size() ? ipStr.c_str() : NULL
-            , !m_usingProxy ? std::make_pair(listen_port, listen_port) : std::make_pair(0, 0) ));
+            , !m_usingProxy ? std::make_pair(listen_port, listen_port) : std::make_pair(0, 0)
+            , mapArgs.count("-bind") ? mapMultiArgs["-bind"] : std::vector<std::string>()
+            , mapArgs.count("-externalip") ? mapMultiArgs["-externalip"] : std::vector<std::string>()
+        )
+    );
     boost::shared_ptr<session> ses(m_ses);
 
     if( m_usingProxy ) {
@@ -384,14 +392,23 @@ void ThreadWaitExtIP()
             ses->start_natpmp();
         }
 
-        ses->listen_on(std::make_pair(listen_port, listen_port)
-                       , ec, bind_to_interface.c_str());
-        if (ec)
-        {
-            fprintf(stderr, "failed to listen%s%s on ports %d-%d: %s\n"
-                    , bind_to_interface.empty() ? "" : " on ", bind_to_interface.c_str()
-                    , listen_port, listen_port+1, ec.message().c_str());
-        }
+        if (mapArgs.count("-externalip")) for (const auto& i: mapMultiArgs["-externalip"]) {
+            ses->listen_on(
+                std::make_pair(listen_port, listen_port), ec, i.c_str()
+            );
+            if (ec) fprintf(
+                stderr, "failed to listen `%s` interface on ports %d/%d: %s\n", i.c_str(),
+                listen_port, listen_port + 1, ec.message().c_str()
+            );
+        } else {
+            ses->listen_on(
+                std::make_pair(listen_port, listen_port), ec
+            );
+            if (ec) fprintf(
+                stderr, "failed to listen default interface on ports %d/%d: %s\n",
+                listen_port, listen_port + 1, ec.message().c_str()
+            );
+        } // @TODO implement multibind for other interfaces!
 
         dht_settings dhts;
         // settings to test local connections
