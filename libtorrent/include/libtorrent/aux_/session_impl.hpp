@@ -765,6 +765,11 @@ namespace libtorrent
 			// we are supposed to listen on.
 			std::vector<tcp::endpoint> m_listen_interfaces;
 
+			// the ip-addresses of the peer
+			// we are supposed to announce.
+			std::vector<tcp::endpoint> m_external_tcp_ips;
+			std::vector<tcp::endpoint> m_external_udp_ips;
+
 			// since we might be listening on multiple interfaces
 			// we might need more than one listen socket
 			std::list<listen_socket_t> m_listen_sockets;

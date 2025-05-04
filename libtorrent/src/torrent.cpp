@@ -2234,9 +2234,8 @@ namespace libtorrent
 		req.event = e;
 		error_code ec;
 
-		for (const auto& m_listen_interface: m_ses.m_listen_interfaces) {
-			req.ip.push_back(m_listen_interface.address());
-		}
+		for (const auto& m_external_tcp_ip: m_ses.m_external_tcp_ips)
+			req.ip.push_back(m_external_tcp_ip.address());
 
 		// since sending our IPv4/v6 address to the tracker may be sensitive. Only
 		// do that if we're not in anonymous mode and if it's a private torrent
@@ -2416,10 +2415,9 @@ namespace libtorrent
 		req.info_hash = m_torrent_file->info_hash();
 		req.kind = tracker_request::scrape_request;
 		req.url = m_trackers[i].url;
-		for (auto const& m_listen_interface : m_ses.m_listen_interfaces)
-		{
-			req.ip.push_back(m_listen_interface.address());
-		}
+		for (auto const& m_external_tcp_ip : m_ses.m_external_tcp_ips)
+			req.ip.push_back(m_external_tcp_ip.address());
+
 		m_ses.m_tracker_manager.queue_request(m_ses.m_io_service, m_ses.m_half_open, req
 			, tracker_login(), shared_from_this());
 	}
@@ -2636,9 +2634,9 @@ namespace libtorrent
 		// matches one of the listen interfaces, since that means this
 		// announce was the second one
 		// don't connect twice just to tell it we're stopping
-		for (auto const& m_listen_interface : m_ses.m_listen_interfaces)
+		for (auto const& m_external_tcp_ip : m_ses.m_external_tcp_ips)
 		{
-			auto a = m_listen_interface.address(); // allocate memory once
+			auto a = m_external_tcp_ip.address(); // allocate memory once
 
 			if (/*a != r.bind_ip &&*/ r.event != tracker_request::stopped && is_connectable(a, tracker_ip))
 			{
@@ -2655,7 +2653,7 @@ namespace libtorrent
 #endif
 				}
 			}
-		}
+		} // @TODO is UDP supporting at this point?
 
 		do_connect_boost();
 

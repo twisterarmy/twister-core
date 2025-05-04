@@ -725,6 +725,16 @@ namespace aux {
 			);
 			TORRENT_ASSERT_VAL(!ec, ec);
 		}
+
+		// init external ip list to announce
+		for (const auto& m_external_ip : ext_ips)
+		{
+			error_code ec;
+			m_external_tcp_ips.push_back(
+				tcp::endpoint(address::from_string(m_external_ip, ec), listen_port_range.first)
+			);
+			TORRENT_ASSERT_VAL(!ec, ec);
+		}
 		// if the interfaces are still empty (which usually means the `-bind` option is not provided),
 		// use all interfaces by default.
 		if (m_listen_interfaces.empty()) {
