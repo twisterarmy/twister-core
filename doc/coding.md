@@ -67,30 +67,28 @@ Threads
 
 - StartNode : Starts other threads.
 
-- ThreadGetMyExternalIP : Determines outside-the-firewall IP address, sends addr message to connected peers when it determines it. 
-
 - ThreadSocketHandler : Sends/Receives data from peers on port 8333.
- 
+
 - ThreadMessageHandler : Higher-level message handling (sending and receiving).
- 
+
 - ThreadOpenConnections : Initiates new connections to peers.
 
 - ThreadTopUpKeyPool : replenishes the keystore's keypool.
- 
-- ThreadCleanWalletPassphrase : re-locks an encrypted wallet after user has unlocked it for a period of time. 
- 
+
+- ThreadCleanWalletPassphrase : re-locks an encrypted wallet after user has unlocked it for a period of time.
+
 - SendingDialogStartTransfer : used by pay-via-ip-address code (obsolete)
- 
-- ThreadDelayedRepaint : repaint the gui 
+
+- ThreadDelayedRepaint : repaint the gui
 
 - ThreadFlushWalletDB : Close the wallet.dat file if it hasn't been used in 500ms.
- 
+
 - ThreadRPCServer : Remote procedure call handler, listens on port 8332 for connections and services them.
- 
+
 - ThreadBitcoinMiner : Generates bitcoins
-  
+
 - ThreadMapPort : Universal plug-and-play startup/shutdown
- 
+
 - Shutdown : Does an orderly shutdown of everything
- 
+
 - ExitTimeout : Windows-only, sleeps 5 seconds then exits application

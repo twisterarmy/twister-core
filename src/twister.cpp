@@ -301,34 +301,9 @@ data_error:
     return -2;
 }
 
-void ThreadWaitExtIP()
+void ThreadSessionInit()
 {
-    SimpleThreadCounter threadCounter(&cs_twister, &m_threadsToJoin, "wait-extip");
-
-    // wait up to 10 seconds for bitcoin to get the external IP
-    if (!mapArgs.count("-externalip"))
-    {
-        // IPv4
-        for( int i = 0; i < 20; i++ ) {
-            const CNetAddr paddrPeer("8.8.8.8"); // @TODO CloudFlare `1.1.1.1` or an option?
-            CAddress addr( GetLocalAddress(&paddrPeer) );
-            if( addr.IsValid() ) {
-                mapMultiArgs["-externalip"].push_back(addr.ToStringIP());
-                break;
-            }
-            MilliSleep(500);
-        }
-        // IPv6
-        for( int i = 0; i < 20; i++ ) {
-            const CNetAddr paddrPeer("2001:4860:4860::64");
-            CAddress addr( GetLocalAddress(&paddrPeer) );
-            if( addr.IsValid() ) {
-                mapMultiArgs["-externalip"].push_back(addr.ToStringIP());
-                break;
-            }
-            MilliSleep(500);
-        }
-    }
+    SimpleThreadCounter threadCounter(&cs_twister, &m_threadsToJoin, "session-init");
 
     libtorrent::error_code ec; // libtorrent::error_code == boost::system::error_code
 
@@ -344,13 +319,9 @@ void ThreadWaitExtIP()
     proxyType proxyInfoOut;
     m_usingProxy = GetProxy(NET_IPV4, proxyInfoOut);
 
-    printf("Creating new libtorrent session port=%d proxy=%s\nExternal IP:\n",
+    printf("Creating new libtorrent session port=%d proxy=%s\n",
            !m_usingProxy ? listen_port : 0,
-           m_usingProxy ? proxyInfoOut.first.ToStringIPPort().c_str() : "");
-
-    if (mapArgs.count("-externalip"))
-        for (const auto& ip : mapMultiArgs["-externalip"])
-            printf("%s\n", ip.c_str());
+            m_usingProxy ? proxyInfoOut.first.ToStringIPPort().c_str() : "");
 
     m_ses.reset(
         new session(
@@ -1038,7 +1009,7 @@ void startSessionTorrent(boost::thread_group& threadGroup)
     DhtProxy::fEnabled = GetBoolArg("-dhtproxy", false);
 
     m_threadsToJoin = 0;
-    threadGroup.create_thread(boost::bind(&ThreadWaitExtIP));
+    threadGroup.create_thread(boost::bind(&ThreadSessionInit));
     threadGroup.create_thread(boost::bind(&ThreadMaintainDHTNodes));
     threadGroup.create_thread(boost::bind(&ThreadSessionAlerts));
     threadGroup.create_thread(boost::bind(&ThreadHashtagsAging));
@@ -3922,8 +3893,6 @@ Object getLibtorrentSessionStatus()
     boost::shared_ptr<session> ses(m_ses);
     if( ses ) {
         session_status stats = ses->status();
-
-        obj.push_back( Pair("ext_addr_net2", stats.external_addr_v4) );
 
         obj.push_back( Pair("dht_torrents", stats.dht_torrents) );
         obj.push_back( Pair("num_peers", stats.num_peers) );

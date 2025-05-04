@@ -88,25 +88,34 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("dht_global_nodes", dht_global_nodes));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
     if( !usingProxy ) {
-        obj.push_back(Pair("ext_port1", GetListenPort()));
-        obj.push_back(Pair("ext_port2", GetListenPort()+LIBTORRENT_PORT_OFFSET));
+        obj.push_back(Pair("ext_port1", GetListenPort())); // @TODO remove
+        obj.push_back(Pair("ext_port2", GetListenPort() + LIBTORRENT_PORT_OFFSET)); // @TODO remove
+
+        Array external_ports;
+        external_ports.push_back(
+            GetListenPort()
+        );
+        external_ports.push_back(
+            GetListenPort() + LIBTORRENT_PORT_OFFSET
+        );
+        // @TODO do not forget about temporary deactivated port 4433/4433+n group!
+        obj.push_back( Pair("external_ports", external_ports) );
     }
     {
         LOCK(cs_main);
-        obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
-        obj.push_back(Pair("testnet",       TestNet()));
+        obj.push_back(Pair("difficulty", (double) GetDifficulty()));
+        obj.push_back(Pair("testnet", TestNet()));
         {
             LOCK(pwalletMain->cs_wallet);
             if (pwalletMain->IsCrypted())
-                obj.push_back(Pair("unlocked_until", (boost::int64_t)nWalletUnlockTime));
+                obj.push_back(Pair("unlocked_until", (boost::int64_t) nWalletUnlockTime));
         }
-        obj.push_back(Pair("public_server_mode", GetBoolArg("-public_server_mode",false)));
-        obj.push_back(Pair("errors",        GetWarnings("statusbar")));
+        obj.push_back(Pair("public_server_mode", GetBoolArg("-public_server_mode", false)));
+        obj.push_back(Pair("errors", GetWarnings("statusbar")));
     }
 
-    const CNetAddr paddrPeer("8.8.8.8");
-    CAddress addr( GetLocalAddress(&paddrPeer) );
-    obj.push_back(Pair("ext_addr_net1", addr.IsValid() ? addr.ToStringIP() : string()) );
+    obj.push_back(Pair("ext_addr_net1", "deprecated, please upgrade twister-html") ); // @TODO remove
+    obj.push_back(Pair("ext_addr_net2", "deprecated, please upgrade twister-html") ); // @TODO remove
 
     Object torrent_stats = getLibtorrentSessionStatus();
     obj.insert( obj.end(), torrent_stats.begin(), torrent_stats.end() );
@@ -168,11 +177,11 @@ Value listwalletusers(const Array& params, bool fHelp)
 
     // Find all addresses that have the given account
     Array ret;
-    
+
     // Always return an empty array on a public server
     if(GetBoolArg("-public_server_mode",false))
         return ret;
-    
+
     LOCK(pwalletMain->cs_wallet);
     BOOST_FOREACH(const PAIRTYPE(CKeyID, CKeyMetadata)& item, pwalletMain->mapKeyMetadata)
     {
@@ -638,5 +647,3 @@ public:
         return obj;
     }
 };
-
-
