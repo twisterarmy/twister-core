@@ -60,6 +60,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/escape_string.hpp"
 #include "libtorrent/broadcast_socket.hpp" // for is_any
 #include "libtorrent/random.hpp"
+#include "libtorrent/network.hpp"
 
 namespace libtorrent
 {
@@ -247,28 +248,31 @@ namespace libtorrent
 	std::vector<udp::endpoint> udp_tracker_connection::pick_target_endpoints() const
 	{
 		std::vector<udp::endpoint> target_endpoints;
-		for (auto const& ip : ip()) {
-			for (auto const& m_endpoint : m_endpoints) {
-				if ((m_endpoint.address().is_v4() && ip.is_v4()) ||
-					(m_endpoint.address().is_v6() && ip.is_v6()))
+		for (auto const& a : ip())
+		{
+			for (auto const& m_endpoint : m_endpoints)
+			{
+				const auto b = m_endpoint.address();
+				if (is_connectable(a, b))
+				{
 					target_endpoints.push_back(
-						udp::endpoint(m_endpoint.address(), m_endpoint.port())
+						udp::endpoint(b, m_endpoint.port())
 					);
-				else {
-					boost::shared_ptr<request_callback> cb = requester();
-					if (cb)
-					{
-						char const* tracker_address_type = m_endpoint.address().is_v4() ? "IPv4" : "IPv6";
-						char const* bind_address_type = ip.is_v4() ? "IPv4" : "IPv6";
-						char msg[200];
-						snprintf(msg, sizeof(msg)
-							, "the tracker only resolves to an %s  address, and you're "
-							"listening on an %s socket. This may prevent you from receiving "
-							"incoming connections."
-							, tracker_address_type, bind_address_type);
+					continue;
+				}
+				boost::shared_ptr<request_callback> cb = requester();
+				if (cb)
+				{
+					char const* bind_address_type = a.is_v4() ? "IPv4" : "IPv6 | Yggdrasil";
+					char const* tracker_address_type = b.is_v4() ? "IPv4" : "IPv6 | Yggdrasil";
+					char msg[200];
+					snprintf(msg, sizeof(msg)
+						, "the tracker only resolves to an %s  address, and you're "
+						"listening on an %s socket. This may prevent you from receiving "
+						"incoming connections."
+						, tracker_address_type, bind_address_type);
 
-						cb->tracker_warning(tracker_req(), msg);
-					}
+					cb->tracker_warning(tracker_req(), msg);
 				}
 			}
 		}
