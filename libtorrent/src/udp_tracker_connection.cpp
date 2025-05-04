@@ -559,27 +559,18 @@ namespace libtorrent
 
 		std::vector<peer_entry> peer_list;
 
-		if (is_v6)
+		for (int i = 0; i < num_peers; ++i)
 		{
-			for (int i = 0; i < num_peers; ++i)
-			{
-				peer_entry e;
+			peer_entry e;
+			if (is_v6) {
 				std::memcpy(e.ip.data(), buf, 16);
 				buf += 16;
-				e.port = detail::read_uint16(buf);
-				peer_list.push_back(e);
-			}
-		}
-		else
-		{
-			for (int i = 0; i < num_peers; ++i)
-			{
-				peer_entry e;
+			} else {
 				std::memcpy(e.ip.data(), buf, 4);
 				buf += 8;
-				e.port = detail::read_uint16(buf);
-				peer_list.push_back(e);
 			}
+			e.port = detail::read_uint16(buf);
+			peer_list.push_back(e);
 		}
 
 		std::list<address> ip_list;
