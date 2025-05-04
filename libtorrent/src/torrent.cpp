@@ -2636,22 +2636,16 @@ namespace libtorrent
 		// don't connect twice just to tell it we're stopping
 		for (auto const& m_external_tcp_ip : m_ses.m_external_tcp_ips)
 		{
-			auto a = m_external_tcp_ip.address(); // allocate memory once
-
-			if (/*a != r.bind_ip &&*/ r.event != tracker_request::stopped && is_connectable(a, tracker_ip))
+			const auto a = m_external_tcp_ip.address(); // allocate memory once
+			if (/*a != r.bind_ip &&*/ r.event != tracker_request::stopped
+				&& is_connectable(a, tracker_ip)
+				&& std::find(tracker_ips.begin(), tracker_ips.end(), a) != tracker_ips.end())
 			{
-				if (is_any(tracker_ip)) {
-					// use a = -externalip
-				} // @TODO
-
-				if (std::find(tracker_ips.begin(), tracker_ips.end(), a) != tracker_ips.end())
-				{
-					announce_with_tracker(r.event, a);
+				announce_with_tracker(r.event, a);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
-					debug_log("announce again using %s as the bind interface"
-						, print_address(a).c_str());
+				debug_log("announce again using %s as the bind interface"
+					, print_address(a).c_str());
 #endif
-				}
 			}
 		} // @TODO is UDP supporting at this point?
 
