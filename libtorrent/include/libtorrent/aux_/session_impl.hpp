@@ -756,11 +756,6 @@ namespace libtorrent
 			// at startup
 			int m_key;
 
-			// the number of retries we make when binding the
-			// listen socket. For each retry the port number
-			// is incremented by one
-			int m_listen_port_retries;
-
 			// the ip-addresses of the interface
 			// we are supposed to listen on.
 			std::vector<tcp::endpoint> m_listen_interfaces;
@@ -790,8 +785,7 @@ namespace libtorrent
 			boost::shared_ptr<socket_type> m_i2p_listen_socket;
 #endif
 
-			void setup_listener(listen_socket_t* s, tcp::endpoint ep, int& retries
-				, bool v6_only, int flags, error_code& ec);
+			void setup_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec);
 
 			// the proxy used for bittorrent
 			proxy_settings m_proxy;

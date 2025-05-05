@@ -631,7 +631,6 @@ namespace aux {
 		, m_tracker_manager(*this, m_proxy)
 		, m_num_active_downloading(0)
 		, m_num_active_finished(0)
-		, m_listen_port_retries(listen_port_range.second - listen_port_range.first)
 #if TORRENT_USE_I2P
 		, m_i2p_conn(m_io_service)
 #endif
@@ -2171,8 +2170,7 @@ namespace aux {
 			*i = ' ';
 	}
 
-	void session_impl::setup_listener(listen_socket_t* s, tcp::endpoint ep
-		, int& retries, bool v6_only, int flags, error_code& ec)
+	void session_impl::setup_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec)
 	{
 		int last_op = 0;
 		s->sock.reset(new socket_acceptor(m_io_service));
@@ -2210,33 +2208,9 @@ namespace aux {
 		}
 #endif
 		s->sock->bind(ep, ec);
-		while (ec && retries > 0)
-		{
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			session_log("failed to bind to interface \"%s\": %s"
-				, print_endpoint(ep).c_str(), ec.message().c_str());
-#endif
-			ec.clear();
-			TORRENT_ASSERT_VAL(!ec, ec);
-			--retries;
-			ep.port(ep.port() + 1);
-			s->sock->bind(ep, ec);
-			last_op = listen_failed_alert::bind;
-		}
-		if (ec && !(flags & session::listen_no_system_port))
-		{
-			// instead of giving up, trying
-			// let the OS pick a port
-			ep.port(0);
-			ec = error_code();
-			s->sock->bind(ep, ec);
-			last_op = listen_failed_alert::bind;
-		}
-		if (ec)
-		{
-			// not even that worked, give up
-			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
+
+		if (ec) {
+			printf(">>>>>>>>>>>>>>>>>>>>>>>\n");
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			session_log("cannot bind to interface \"%s\": %s"
 				, print_endpoint(ep).c_str(), ec.message().c_str());
@@ -2245,11 +2219,6 @@ namespace aux {
 		}
 		s->external_port = s->sock->local_endpoint(ec).port();
 		last_op = listen_failed_alert::get_peer_name;
-		if (!ec)
-		{
-			s->sock->listen(m_settings.listen_queue_size, ec);
-			last_op = listen_failed_alert::listen;
-		}
 		if (ec)
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
@@ -2260,6 +2229,8 @@ namespace aux {
 #endif
 			return;
 		}
+		s->sock->listen(m_settings.listen_queue_size, ec);
+		last_op = listen_failed_alert::listen;
 
 		// if we asked the system to listen on port 0, which
 		// socket did it end up choosing?
@@ -2294,7 +2265,6 @@ namespace aux {
 		TORRENT_ASSERT(is_network_thread());
 
 		TORRENT_ASSERT(!m_abort);
-retry:
 
 		// close the open listen sockets
 		// close the listen sockets
@@ -2319,8 +2289,7 @@ retry:
 
 		for (auto& m_listen_interface: m_listen_interfaces) {
 			listen_socket_t s;
-			setup_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port())
-				, m_listen_port_retries, false, flags, ec);
+			setup_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port()), false, flags, ec);
 
 			if (s.sock)
 			{
@@ -2360,13 +2329,6 @@ retry:
 			session_log("cannot bind to UDP interface \"%s\": %s"
 				, print_endpoint(_interface_donor).c_str(), ec.message().c_str());
 #endif
-			if (m_listen_port_retries > 0)
-			{
-				// @TODO multibind, const overwrite
-				//_interface_donor.port(_interface_donor.port() + 1);
-				--m_listen_port_retries;
-				goto retry;
-			}
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(_interface_donor
 					, listen_failed_alert::bind, ec));
@@ -5403,8 +5365,6 @@ retry:
 		{
 			new_interface = tcp::endpoint(address_v4::any(), port_range.first);
 		}
-
-		m_listen_port_retries = port_range.second - port_range.first;
 
 		// if the interface is the same and the socket is open
 		// don't do anything
