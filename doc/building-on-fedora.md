@@ -24,5 +24,6 @@ Tested on:
 
 1. `cd twister-core`
 2. `./twisterd -rpcuser=user -rpcpassword=pwd -rpcallowip=127.0.0.1`
-3. Open http://127.0.0.1:28332/index.html and use the user/pwd credentials
+3. open [http://127.0.0.1:28332](http://127.0.0.1:28332) or [http://[::1]:28332](http://[::1]:28332)
+    - enter `user` and `pwd` in the authorization dialog
 4. Create your account !
