@@ -2210,11 +2210,12 @@ namespace aux {
 		s->sock->bind(ep, ec);
 
 		if (ec) {
-			printf(">>>>>>>>>>>>>>>>>>>>>>>\n");
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			session_log("cannot bind to interface \"%s\": %s"
-				, print_endpoint(ep).c_str(), ec.message().c_str());
-#endif
+			printf(
+				"[warning] cannot bind to interface %s port %d: %s\n",
+				ep.address().to_string().c_str(),
+				ep.port(),
+				ec.message().c_str()
+			);
 			return;
 		}
 		s->external_port = s->sock->local_endpoint(ec).port();
@@ -2223,10 +2224,12 @@ namespace aux {
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			session_log("cannot listen on interface \"%s\": %s"
-				, print_endpoint(ep).c_str(), ec.message().c_str());
-#endif
+				printf(
+					"[warning] cannot listen on interface %s port %d: %s\n",
+					ep.address().to_string().c_str(),
+					ep.port(),
+					ec.message().c_str()
+				);
 			return;
 		}
 		s->sock->listen(m_settings.listen_queue_size, ec);
@@ -2238,26 +2241,24 @@ namespace aux {
 		{
 			ep.port(s->sock->local_endpoint(ec).port());
 			last_op = listen_failed_alert::get_peer_name;
-			if (ec)
-			{
-				if (m_alerts.should_post<listen_failed_alert>())
-					m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-				char msg[200];
-				snprintf(msg, 200, "failed to get peer name \"%s\": %s"
-					, print_endpoint(ep).c_str(), ec.message().c_str());
-				(*m_logger) << time_now_string() << msg << "\n";
-#endif
+			if (ec && m_alerts.should_post<listen_failed_alert>()) {
+				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
+				printf(
+					"[warning] failed to get peer name: %s\n",
+					print_endpoint(ep).c_str(),
+					ec.message().c_str()
+				);
 			}
 		}
 
 		if (m_alerts.should_post<listen_succeeded_alert>())
 			m_alerts.post_alert(listen_succeeded_alert(ep));
 
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-		session_log(" listening on: %s external port: %d"
-			, print_endpoint(ep).c_str(), s->external_port);
-#endif
+		printf(
+			"listening on %s external port: %d\n",
+			ep.address().to_string().c_str(),
+			ep.port()
+		);
 	}
 
 	void session_impl::open_listen_port(int flags, error_code& ec)
