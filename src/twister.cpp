@@ -319,9 +319,7 @@ void ThreadSessionInit()
     proxyType proxyInfoOut;
     m_usingProxy = GetProxy(NET_IPV4, proxyInfoOut);
 
-    printf("Creating new libtorrent session port=%d proxy=%s\n",
-           !m_usingProxy ? listen_port : 0,
-            m_usingProxy ? proxyInfoOut.first.ToStringIPPort().c_str() : "");
+    printf("creating new libtorrent session...\n");
 
     m_ses.reset(
         new session(
