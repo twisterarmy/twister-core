@@ -139,14 +139,14 @@ namespace libtorrent
 			, fingerprint const& print = fingerprint("LT" , LIBTORRENT_VERSION_MAJOR , LIBTORRENT_VERSION_MINOR, 0, 0) // @TODO twister has `TW` ID defined in `twister.cpp`
 			, int flags = start_default_features | add_default_plugins
 			, boost::uint32_t alert_mask = alert::error_notification
-			, std::pair<int, int> listen_range = std::make_pair(0, 0)
+			, boost::uint16_t listen_port = 0
 			, const std::vector<std::string>& listen_interfaces = {}
 			, const std::vector<std::string>& ext_ips = {}
 			TORRENT_LOGPATH_ARG_DEFAULT
 			)
 		{
 			TORRENT_CFG();
-			init(swarmDb, listen_range, print, alert_mask, listen_interfaces, ext_ips);
+			init(swarmDb, print, alert_mask, listen_port, listen_interfaces, ext_ips);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			set_log_path(logpath);
 #endif
@@ -154,17 +154,16 @@ namespace libtorrent
 		}
 		session(CLevelDB &swarmDb
 			, fingerprint const& print
-			, std::pair<int, int> listen_port_range
 			, int flags = start_default_features | add_default_plugins
 			, int alert_mask = alert::error_notification
+			, boost::uint16_t listen_port = 0
 			, const std::vector<std::string>& listen_interfaces = {}
 			, const std::vector<std::string>& ext_ips = {}
 			TORRENT_LOGPATH_ARG_DEFAULT
 		) {
 			TORRENT_CFG();
-			TORRENT_ASSERT(listen_port_range.first > 0);
-			TORRENT_ASSERT(listen_port_range.first < listen_port_range.second);
-			init(swarmDb, listen_port_range, print, alert_mask, listen_interfaces, ext_ips);
+			TORRENT_ASSERT(listen_port > 0);
+			init(swarmDb, print, alert_mask, listen_port, listen_interfaces, ext_ips);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			set_log_path(logpath);
 #endif
@@ -607,11 +606,7 @@ namespace libtorrent
 		// with a DHT ping packet, and connect to those that responds first. On windows one
 		// can only connect to a few peers at a time because of a built in limitation (in XP
 		// Service pack 2).
-		void listen_on(
-			std::pair<int, int> const& port_range
-			, error_code& ec
-			, const char* net_interface = 0
-			, int flags = 0);
+		void listen(error_code& ec, int flags = 0);
 		unsigned short listen_port() const;
 
 
@@ -865,9 +860,9 @@ namespace libtorrent
 
 		void init(
 			CLevelDB &swarmDb,
-			std::pair<int, int> listen_range,
 			fingerprint const& id,
 			boost::uint32_t alert_mask,
+			boost::uint16_t listen_port,
 			const std::vector<std::string>& listen_interfaces = {},
 			const std::vector<std::string>& ext_ips = {}
 		);

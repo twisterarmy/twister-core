@@ -327,7 +327,7 @@ void ThreadSessionInit()
             , fingerprint("TW", LIBTORRENT_VERSION_MAJOR, LIBTORRENT_VERSION_MINOR, 0, 0)
             , session::add_default_plugins
             , alert::dht_notification | alert::status_notification
-            , !m_usingProxy ? std::make_pair(listen_port, listen_port) : std::make_pair(0, 0)
+            , !m_usingProxy ? listen_port : 0 // @TODO handle proxy on multibind case
             , mapArgs.count("-bind") ? mapMultiArgs["-bind"] : std::vector<std::string>()
             , mapArgs.count("-externalip") ? mapMultiArgs["-externalip"] : std::vector<std::string>()
         )
@@ -361,7 +361,7 @@ void ThreadSessionInit()
             ses->start_natpmp();
         }
 
-        ses->listen_on(std::make_pair(listen_port, listen_port), ec);
+        ses->listen(ec);
 
         if (ec) fprintf(
             stderr, "failed to bind libtorrent service: %s\n",

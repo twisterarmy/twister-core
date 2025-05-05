@@ -411,9 +411,9 @@ namespace libtorrent
 
 	void session::init(
 		CLevelDB &swarmDb,
-		std::pair<int, int> listen_range,
 		fingerprint const& id,
 		boost::uint32_t alert_mask,
+		boost::uint16_t listen_port,
 		const std::vector<std::string>& listen_interfaces,
 		const std::vector<std::string>& ext_ips
 	) {
@@ -424,7 +424,7 @@ namespace libtorrent
 		::_set_se_translator(straight_to_debugger);
 #endif
 
-		m_impl.reset(new session_impl(swarmDb, listen_range, id, alert_mask, listen_interfaces, ext_ips));
+		m_impl.reset(new session_impl(swarmDb, id, alert_mask, listen_port, listen_interfaces, ext_ips));
 
 #ifdef TORRENT_MEMDEBUG
 		start_malloc_debug();
@@ -749,12 +749,9 @@ namespace libtorrent
 		TORRENT_ASYNC_CALL2(remove_torrent, h, options);
 	}
 
-	void session::listen_on(
-		std::pair<int, int> const& port_range
-		, error_code& ec
-		, const char* net_interface, int flags)
+	void session::listen(error_code& ec, int flags)
 	{
-		TORRENT_SYNC_CALL4(listen_on, port_range, boost::ref(ec), net_interface, flags);
+		TORRENT_SYNC_CALL2(listen, ec, flags);
 	}
 
 	unsigned short session::listen_port() const

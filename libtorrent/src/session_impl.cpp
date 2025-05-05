@@ -599,10 +599,10 @@ namespace aux {
 	}
 #endif
 
-	session_impl::session_impl(CLevelDB &swarmDb,
-		std::pair<int, int> listen_port_range
+	session_impl::session_impl(CLevelDB &swarmDb
 		, fingerprint const& cl_fprint
 		, boost::uint32_t alert_mask
+		, boost::uint16_t listen_port
 		, const std::vector<std::string>& listen_interfaces
 		, const std::vector<std::string>& ext_ips
 		)
@@ -685,6 +685,7 @@ namespace aux {
 		, m_network_thread(0)
 		, m_hashcash_nbits(HASHCASH_MIN_NBITS)
 		, m_hashcash_reqs(0)
+		, m_listen_port(listen_port)
 #endif
 	{
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
@@ -716,33 +717,23 @@ namespace aux {
 		}
 #endif
 		// init interfaces to bind on
-		for (const auto& listen_interface : listen_interfaces)
-		{
+		for (const auto& listen_interface : listen_interfaces) {
 			error_code ec;
-			m_listen_interfaces.push_back(
-				tcp::endpoint(address::from_string(listen_interface, ec), listen_port_range.first)
-			);
+			m_listen_interfaces.push_back(address::from_string(listen_interface, ec));
 			TORRENT_ASSERT_VAL(!ec, ec);
 		}
 		// if the interfaces are still empty (which usually means the `-bind` option is not provided),
 		// use all interfaces by default.
 		if (m_listen_interfaces.empty()) {
-			// IPv4
-			m_listen_interfaces.push_back(
-				tcp::endpoint(address_v4::any(), listen_port_range.first)
-			);
-			// IPv6
-			m_listen_interfaces.push_back(
-				tcp::endpoint(address_v6::any(), listen_port_range.first)
-			);
+			m_listen_interfaces.push_back(address_v4::any());
+			m_listen_interfaces.push_back(address_v6::any());
 		}
 
 		// init external ip list to announce
-		for (const auto& m_external_ip : ext_ips)
-		{
+		for (const auto& m_external_ip : ext_ips) {
 			error_code ec;
 			m_external_tcp_ips.push_back(
-				tcp::endpoint(address::from_string(m_external_ip, ec), listen_port_range.first)
+				tcp::endpoint(address::from_string(m_external_ip, ec), m_listen_port)
 			);
 			TORRENT_ASSERT_VAL(!ec, ec);
 		}
@@ -2284,15 +2275,15 @@ namespace aux {
 		std::vector<tcp::endpoint> ssl_interfaces;
 		for (const auto& m_listen_interface: m_listen_interfaces) {
 			ssl_interfaces.push_back(
-				tcp::endpoint(m_listen_interface.address(), m_settings.ssl_listen)
+				tcp::endpoint(m_listen_interface, m_settings.ssl_listen)
 			);
 		}*/
 #endif
 
-		for (auto& m_listen_interface: m_listen_interfaces) {
+		for (auto const& m_listen_interface: m_listen_interfaces) {
 
 			listen_socket_t s;
-			if (!setup_tcp_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port()), false, flags, ec))
+			if (!setup_tcp_listener(&s, tcp::endpoint(m_listen_interface, m_listen_port), false, flags, ec))
 				return false;
 
 			if (s.sock)
@@ -2300,7 +2291,7 @@ namespace aux {
 				// update the listen_interface member with the
 				// actual port we ended up listening on, so that the other
 				// sockets can be bound to the same one
-				m_listen_interface.port(s.external_port);
+				// const: m_listen_interface.port(s.external_port);
 
 				TORRENT_ASSERT(!m_abort);
 				m_listen_sockets.push_back(s);
@@ -2327,23 +2318,22 @@ namespace aux {
 		}
 
 		// this one is harder to multibind as has no shared `setup_tcp_listener` implementation + uses single header members @TODO
-		const auto& _interface_donor = m_listen_interfaces[0]; // keep in mind that we are using hardcoded [0] as expected by app logic above
-		m_udp_socket.bind(udp::endpoint(_interface_donor.address(), _interface_donor.port()), ec);
+		auto _udp_ep = udp::endpoint(m_listen_interfaces[0], m_listen_port);
+		m_udp_socket.bind(_udp_ep, ec);
 		if (ec)
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			session_log("cannot bind to UDP interface \"%s\": %s"
-				, print_endpoint(_interface_donor).c_str(), ec.message().c_str());
+				, m_listen_interfaces[0].c_str(), ec.message().c_str());
 #endif
 			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(_interface_donor
-					, listen_failed_alert::bind, ec));
+				m_alerts.post_alert(listen_failed_alert(tcp::endpoint(m_listen_interfaces[0], m_listen_port), listen_failed_alert::bind, ec));
 		}
 		else
 		{
 			m_external_udp_port = m_udp_socket.local_port();
-			maybe_update_udp_mapping(0, _interface_donor.port(), _interface_donor.port());
-			maybe_update_udp_mapping(1, _interface_donor.port(), _interface_donor.port());
+			maybe_update_udp_mapping(0, m_listen_port, m_listen_port); // @TODO
+			maybe_update_udp_mapping(1, m_listen_port, m_listen_port);
 		}
 
 		m_udp_socket.set_option(type_of_service(m_settings.peer_tos), ec);
@@ -2420,7 +2410,7 @@ namespace aux {
 #endif
 		socks5_stream& s = *m_socks_listen_socket->get<socks5_stream>();
 		s.set_command(2); // 2 means BIND (as opposed to CONNECT)
-		m_socks_listen_port = m_listen_interfaces[0].port(); // @TODO multibind or shared port member
+		m_socks_listen_port = m_listen_port; // @TODO multibind or shared port member
 		if (m_socks_listen_port == 0) m_socks_listen_port = 2000 + random() % 60000;
 		s.async_connect(tcp::endpoint(address_v4::any(), m_socks_listen_port)
 			, boost::bind(&session_impl::on_socks_accept, this, m_socks_listen_socket, _1));
@@ -2449,7 +2439,7 @@ namespace aux {
 		i2p_stream& s = *m_i2p_listen_socket->get<i2p_stream>();
 		s.set_command(i2p_stream::cmd_accept);
 		s.set_session_id(m_i2p_conn.session_id());
-		s.async_connect(tcp::endpoint(address_v4::any(), m_listen_interfaces[0].port()) // @TODO multibind or shared port member
+		s.async_connect(tcp::endpoint(address_v4::any(), m_listen_port) // @TODO multibind or shared port member
 			, boost::bind(&session_impl::on_i2p_accept, this, m_i2p_listen_socket, _1));
 	}
 
@@ -2465,11 +2455,11 @@ namespace aux {
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(tcp::endpoint(
-					address_v4::any(), m_listen_interfaces[0].port()  // @TODO multibind or shared port member
+					address_v4::any(), m_listen_port  // @TODO multibind or shared port member
 				), listen_failed_alert::accept, e));
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			session_log("cannot bind to port %d: %s"
-				, m_listen_interfaces[0].port(),  // @TODO multibind or shared port member
+				, m_listen_port,  // @TODO multibind or shared port member
 				e.message().c_str());
 #endif
 			return;
@@ -2859,7 +2849,7 @@ namespace aux {
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(tcp::endpoint(
-					address_v4::any(), m_listen_interfaces[0].port() // @TODO multibind or shared port member
+					address_v4::any(), m_listen_port // @TODO multibind or shared port member
 				), listen_failed_alert::accept, e));
 			return;
 		}
@@ -5171,7 +5161,7 @@ namespace aux {
 			if (pos >= queue_pos) queue_pos = pos + 1;
 		}
 
-		torrent_ptr.reset(new torrent(*this, m_listen_interfaces[0] // @TODO multibind or shared port member
+		torrent_ptr.reset(new torrent(*this, tcp::endpoint(m_listen_interfaces[0], m_listen_port) // @TODO multibind or shared port member
 			, 16 * 1024, queue_pos, params, *ih));
 		torrent_ptr->start();
 
@@ -5344,46 +5334,9 @@ namespace aux {
 		TORRENT_ASSERT(m_torrents.find(i_hash) == m_torrents.end());
 	}
 
-	void session_impl::listen_on(
-		std::pair<int, int> const& port_range
-		, error_code& ec
-		, const char* net_interface, int flags)
+	void session_impl::listen(error_code& ec, int flags)
 	{
 		INVARIANT_CHECK;
-
-		tcp::endpoint new_interface;
-		if (net_interface && std::strlen(net_interface) > 0)
-		{
-			new_interface = tcp::endpoint(address::from_string(net_interface, ec), port_range.first);
-			if (ec)
-			{
-				if (m_alerts.should_post<listen_failed_alert>())
-					m_alerts.post_alert(listen_failed_alert(new_interface, listen_failed_alert::parse_addr, ec));
-
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-				session_log("listen_on: %s failed: %s"
-					, net_interface, ec.message().c_str());
-#endif
-				return;
-			}
-		}
-		else
-		{
-			new_interface = tcp::endpoint(address_v4::any(), port_range.first);
-		}
-
-		// if the interface is the same and the socket is open
-		// don't do anything
-		for (const auto& m_listen_interface: m_listen_interfaces)
-		{
-			if (new_interface == m_listen_interface && !m_listen_sockets.empty())
-				return;
-		}
-
-		m_listen_interfaces.push_back(
-			new_interface
-		);
-
 		open_listen_port(flags, ec);
 	}
 
@@ -5391,9 +5344,9 @@ namespace aux {
 	{
 		for (std::list<listen_socket_t>::const_iterator i = m_listen_sockets.begin()
 			, end(m_listen_sockets.end()); i != end; ++i)
-		{
-			if (i->external_address != address()) return i->external_address;
-		}
+			if (i->external_address != address())
+				return i->external_address;
+
 		return address();
 	}
 
@@ -6104,7 +6057,7 @@ namespace aux {
 		if (m_lsd) return;
 
 		m_lsd = new lsd(m_io_service
-			, m_listen_interfaces[0].address() // @TODO complete multibind feature
+			, m_listen_interfaces[0] // @TODO complete multibind feature
 			, boost::bind(&session_impl::on_lsd_peer, this, _1, _2));
 	}
 
@@ -6117,7 +6070,7 @@ namespace aux {
 		// the natpmp constructor may fail and call the callbacks
 		// into the session_impl.
 		natpmp* n = new (std::nothrow) natpmp(m_io_service
-			, m_listen_interfaces[0].address() // @TODO complete multibind feature
+			, m_listen_interfaces[0] // @TODO complete multibind feature
 			, boost::bind(&session_impl::on_port_mapping
 				, this, _1, _2, _3, _4, 0)
 			, boost::bind(&session_impl::on_port_map_log
@@ -6126,15 +6079,10 @@ namespace aux {
 
 		m_natpmp = n;
 
-		const int _port = m_listen_interfaces[0].port(); // @TODO complete multibind feature
-		if (_port > 0)
-		{
-			remap_tcp_ports(1, _port, ssl_listen_port());
-		}
 		if (m_udp_socket.is_open())
 		{
 			m_udp_mapping[0] = m_natpmp->add_mapping(natpmp::udp
-				, _port, _port);
+				, m_listen_port, m_listen_port);
 		}
 		return n;
 	}
@@ -6148,7 +6096,7 @@ namespace aux {
 		// the upnp constructor may fail and call the callbacks
 		upnp* u = new (std::nothrow) upnp(m_io_service
 			, m_half_open
-			, m_listen_interfaces[0].address() // @TODO complete multibind feature
+			, m_listen_interfaces[0] // @TODO complete multibind feature
 			, m_settings.user_agent
 			, boost::bind(&session_impl::on_port_mapping
 				, this, _1, _2, _3, _4, 1)
@@ -6161,14 +6109,10 @@ namespace aux {
 		m_upnp = u;
 
 		m_upnp->discover_device();
-		const int _port = m_listen_interfaces[0].port(); // @TODO complete multibind feature
-		if (_port > 0 || ssl_listen_port() > 0)
-		{
-			remap_tcp_ports(2, _port, ssl_listen_port());
-		}
+		remap_tcp_ports(2, m_listen_port, ssl_listen_port());
 		if (m_udp_socket.is_open())
 		{
-			m_udp_mapping[1] = m_upnp->add_mapping(upnp::udp , _port, _port);
+			m_udp_mapping[1] = m_upnp->add_mapping(upnp::udp , m_listen_port, m_listen_port);
 		}
 		return u;
 	}

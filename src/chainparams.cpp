@@ -9,6 +9,7 @@
 #include "core.h"
 #include "protocol.h"
 #include "util.h"
+#include "twister.h"
 
 //
 // Main network
@@ -183,8 +184,8 @@ public:
         pchMessageStart[2] = 0xbb;
         pchMessageStart[3] = 0xd2;
         vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
-        nDefaultPort = 28333;
-        nRPCPort = 28332;
+        nDefaultPort = DEFAULT_PORT;
+        nRPCPort = nDefaultPort + RPC_PORT_OFFSET;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
         nTxBits = 0x1e00ffff;
         nSubsidyHalvingInterval = 210000;

@@ -6,7 +6,10 @@
 #include <boost/thread.hpp>
 #include "json/json_spirit.h"
 
-#define LIBTORRENT_PORT_OFFSET 1000
+#define DEFAULT_PORT 28333
+#define RPC_PORT_OFFSET -1 // 28332
+#define LIBTORRENT_PORT_OFFSET 1000 // 29333
+#define LIBTORRENT_SSLPORT_OFFSET 2000 // 30333 (old 4433)
 
 #define USERPOST_FLAG_RT    0x01
 #define USERPOST_FLAG_DM    0x02

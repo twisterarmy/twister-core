@@ -214,10 +214,10 @@ namespace libtorrent
 			typedef std::set<boost::intrusive_ptr<peer_connection> > connection_map;
 			typedef std::map<sha1_hash, boost::shared_ptr<torrent> > torrent_map;
 
-			session_impl(CLevelDB &swarmDb,
-				std::pair<int, int> listen_port_range
+			session_impl(CLevelDB &swarmDb
 				, fingerprint const& cl_fprint
 				, boost::uint32_t alert_mask
+				, boost::uint16_t listen_port
 				, const std::vector<std::string>& listen_interfaces = {}
 				, const std::vector<std::string>& ext_ips = {});
 			virtual ~session_impl();
@@ -346,11 +346,7 @@ namespace libtorrent
 
 			void set_port_filter(port_filter const& f);
 
-			void listen_on(
-				std::pair<int, int> const& port_range
-				, error_code& ec
-				, const char* net_interface = 0
-				, int flags = 0);
+			void listen(error_code& ec, int flags = 0);
 			bool is_listening() const;
 
 			torrent_handle add_torrent(add_torrent_params const&, error_code& ec);
@@ -756,14 +752,17 @@ namespace libtorrent
 			// at startup
 			int m_key;
 
+			// hold port argument value
+			boost::uint16_t m_listen_port;
+
 			// the ip-addresses of the interface
 			// we are supposed to listen on.
-			std::vector<tcp::endpoint> m_listen_interfaces;
+			std::vector<address> m_listen_interfaces;
 
 			// the ip-addresses of the peer
 			// we are supposed to announce.
 			std::vector<tcp::endpoint> m_external_tcp_ips;
-			std::vector<tcp::endpoint> m_external_udp_ips;
+			std::vector<udp::endpoint> m_external_udp_ips;
 
 			// since we might be listening on multiple interfaces
 			// we might need more than one listen socket
