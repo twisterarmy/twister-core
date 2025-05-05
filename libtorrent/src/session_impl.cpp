@@ -1401,7 +1401,7 @@ namespace aux {
 #endif
 	}
 
-	void session_impl::init()
+	bool session_impl::init()
 	{
 #if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
 		session_log(" *** session thread init");
@@ -1436,10 +1436,7 @@ namespace aux {
 		session_log(" open listen port");
 #endif
 		// no reuse_address and allow system defined port
-		open_listen_port(0, ec);
-#if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
-		session_log(" done starting session");
-#endif
+		return open_listen_port(0, ec);
 	}
 
 	void session_impl::save_state(entry* eptr, boost::uint32_t flags) const
@@ -2170,7 +2167,7 @@ namespace aux {
 			*i = ' ';
 	}
 
-	void session_impl::setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec)
+	bool session_impl::setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec)
 	{
 		int last_op = 0;
 		s->sock.reset(new socket_acceptor(m_io_service));
@@ -2180,11 +2177,13 @@ namespace aux {
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			session_log("failed to open socket: %s: %s"
-				, print_endpoint(ep).c_str(), ec.message().c_str());
-#endif
-			return;
+				printf(
+					"failed to open socket %s port %d: %s\n",
+					ep.address().to_string().c_str(),
+					ep.port(),
+					ec.message().c_str()
+				);
+			return false;
 		}
 
 		error_code err; // ignore errors here
@@ -2211,12 +2210,12 @@ namespace aux {
 
 		if (ec) {
 			printf(
-				"[warning] cannot bind to interface %s port %d: %s\n",
+				"cannot bind to interface %s port %d: %s\n",
 				ep.address().to_string().c_str(),
 				ep.port(),
 				ec.message().c_str()
 			);
-			return;
+			return false;
 		}
 		s->external_port = s->sock->local_endpoint(ec).port();
 		last_op = listen_failed_alert::get_peer_name;
@@ -2225,12 +2224,12 @@ namespace aux {
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
 				printf(
-					"[warning] cannot listen on interface %s port %d: %s\n",
+					"cannot listen on interface %s port %d: %s\n",
 					ep.address().to_string().c_str(),
 					ep.port(),
 					ec.message().c_str()
 				);
-			return;
+			return false;
 		}
 		s->sock->listen(m_settings.listen_queue_size, ec);
 		last_op = listen_failed_alert::listen;
@@ -2244,7 +2243,7 @@ namespace aux {
 			if (ec && m_alerts.should_post<listen_failed_alert>()) {
 				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
 				printf(
-					"[warning] failed to get peer name: %s\n",
+					"failed to get peer name: %s\n",
 					print_endpoint(ep).c_str(),
 					ec.message().c_str()
 				);
@@ -2259,9 +2258,11 @@ namespace aux {
 			ep.address().to_string().c_str(),
 			ep.port()
 		);
+
+		return true;
 	}
 
-	void session_impl::open_listen_port(int flags, error_code& ec)
+	bool session_impl::open_listen_port(int flags, error_code& ec)
 	{
 		TORRENT_ASSERT(is_network_thread());
 
@@ -2276,7 +2277,7 @@ namespace aux {
 		m_incoming_connection = false;
 		ec.clear();
 
-		if (m_abort) return;
+		if (m_abort) return false;
 
 #ifdef TORRENT_USE_OPENSSL
 		/* @TODO
@@ -2291,7 +2292,8 @@ namespace aux {
 		for (auto& m_listen_interface: m_listen_interfaces) {
 
 			listen_socket_t s;
-			setup_tcp_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port()), false, flags, ec);
+			if (!setup_tcp_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port()), false, flags, ec))
+				return false;
 
 			if (s.sock)
 			{
@@ -2311,7 +2313,8 @@ namespace aux {
 				listen_socket_t s;
 				s.ssl = true;
 				int retries = 10;
-				setup_tcp_listener(&s, ssl_interface, retries, false, flags, ec);
+				if (!setup_tcp_listener(&s, ssl_interface, retries, false, flags, ec))
+					return false;
 
 				if (s.sock)
 				{
@@ -2320,6 +2323,7 @@ namespace aux {
 				}
 			}*/
 #endif
+			return true;
 		}
 
 		// this one is harder to multibind as has no shared `setup_tcp_listener` implementation + uses single header members @TODO
@@ -5381,11 +5385,6 @@ namespace aux {
 		);
 
 		open_listen_port(flags, ec);
-
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-		m_logger = create_log("main_session", listen_port(), false);
-		session_log("session_impl::listen_on log created");
-#endif
 	}
 
 	address session_impl::listen_address() const

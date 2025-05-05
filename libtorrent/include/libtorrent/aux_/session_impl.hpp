@@ -222,7 +222,7 @@ namespace libtorrent
 				, const std::vector<std::string>& ext_ips = {});
 			virtual ~session_impl();
 			void update_dht_announce_interval();
-			void init();
+			bool init();
 			void start_session();
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			void set_log_path(std::string const& p) { m_logpath = p; }
@@ -247,7 +247,7 @@ namespace libtorrent
 #endif
 			void main_thread();
 
-			void open_listen_port(int flags, error_code& ec);
+			bool open_listen_port(int flags, error_code& ec);
 
 			// prioritize this torrent to be allocated some connection
 			// attempts, because this torrent needs more peers.
@@ -346,7 +346,7 @@ namespace libtorrent
 
 			void set_port_filter(port_filter const& f);
 
-			void  listen_on(
+			void listen_on(
 				std::pair<int, int> const& port_range
 				, error_code& ec
 				, const char* net_interface = 0
@@ -785,7 +785,7 @@ namespace libtorrent
 			boost::shared_ptr<socket_type> m_i2p_listen_socket;
 #endif
 
-			void setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec);
+			bool setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec);
 
 			// the proxy used for bittorrent
 			proxy_settings m_proxy;

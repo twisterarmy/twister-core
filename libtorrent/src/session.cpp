@@ -749,17 +749,6 @@ namespace libtorrent
 		TORRENT_ASYNC_CALL2(remove_torrent, h, options);
 	}
 
-#ifndef TORRENT_NO_DEPRECATE
-	bool session::listen_on(
-		std::pair<int, int> const& port_range
-		, const char* net_interface, int flags)
-	{
-		error_code ec;
-		TORRENT_SYNC_CALL4(listen_on, port_range, boost::ref(ec), net_interface, flags);
-		return !!ec;
-	}
-#endif
-
 	void session::listen_on(
 		std::pair<int, int> const& port_range
 		, error_code& ec

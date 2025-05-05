@@ -361,23 +361,12 @@ void ThreadSessionInit()
             ses->start_natpmp();
         }
 
-        if (mapArgs.count("-externalip")) for (const auto& i: mapMultiArgs["-externalip"]) {
-            ses->listen_on(
-                std::make_pair(listen_port, listen_port), ec, i.c_str()
-            );
-            if (ec) fprintf(
-                stderr, "failed to listen `%s` interface on ports %d/%d: %s\n", i.c_str(),
-                listen_port, listen_port + 1, ec.message().c_str()
-            );
-        } else {
-            ses->listen_on(
-                std::make_pair(listen_port, listen_port), ec
-            );
-            if (ec) fprintf(
-                stderr, "failed to listen default interface on ports %d/%d: %s\n",
-                listen_port, listen_port + 1, ec.message().c_str()
-            );
-        } // @TODO implement multibind for other interfaces!
+        ses->listen_on(std::make_pair(listen_port, listen_port), ec);
+
+        if (ec) fprintf(
+            stderr, "failed to bind libtorrent service: %s\n",
+            ec.message().c_str()
+        );
 
         dht_settings dhts;
         // settings to test local connections
