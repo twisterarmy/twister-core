@@ -2170,7 +2170,7 @@ namespace aux {
 			*i = ' ';
 	}
 
-	void session_impl::setup_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec)
+	void session_impl::setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec)
 	{
 		int last_op = 0;
 		s->sock.reset(new socket_acceptor(m_io_service));
@@ -2289,8 +2289,9 @@ namespace aux {
 #endif
 
 		for (auto& m_listen_interface: m_listen_interfaces) {
+
 			listen_socket_t s;
-			setup_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port()), false, flags, ec);
+			setup_tcp_listener(&s, tcp::endpoint(m_listen_interface.address(), m_listen_interface.port()), false, flags, ec);
 
 			if (s.sock)
 			{
@@ -2310,7 +2311,7 @@ namespace aux {
 				listen_socket_t s;
 				s.ssl = true;
 				int retries = 10;
-				setup_listener(&s, ssl_interface, retries, false, flags, ec);
+				setup_tcp_listener(&s, ssl_interface, retries, false, flags, ec);
 
 				if (s.sock)
 				{
@@ -2321,7 +2322,7 @@ namespace aux {
 #endif
 		}
 
-		// this one is harder to multibind as has no shared `setup_listener` implementation + uses single header members @TODO
+		// this one is harder to multibind as has no shared `setup_tcp_listener` implementation + uses single header members @TODO
 		const auto& _interface_donor = m_listen_interfaces[0]; // keep in mind that we are using hardcoded [0] as expected by app logic above
 		m_udp_socket.bind(udp::endpoint(_interface_donor.address(), _interface_donor.port()), ec);
 		if (ec)

@@ -785,7 +785,7 @@ namespace libtorrent
 			boost::shared_ptr<socket_type> m_i2p_listen_socket;
 #endif
 
-			void setup_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec);
+			void setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec);
 
 			// the proxy used for bittorrent
 			proxy_settings m_proxy;
