@@ -1427,7 +1427,9 @@ namespace aux {
 		session_log(" open listen port");
 #endif
 		// no reuse_address and allow system defined port
-		return open_listen_port(0, ec);
+		open_listen_port(0, ec);
+		if (ec) return false;
+		return true;
 	}
 
 	void session_impl::save_state(entry* eptr, boost::uint32_t flags) const
@@ -2158,7 +2160,7 @@ namespace aux {
 			*i = ' ';
 	}
 
-	bool session_impl::setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec)
+	void session_impl::setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec)
 	{
 		int last_op = 0;
 		s->sock.reset(new socket_acceptor(m_io_service));
@@ -2168,13 +2170,13 @@ namespace aux {
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
-				printf(
-					"failed to open socket %s port %d: %s\n",
-					ep.address().to_string().c_str(),
-					ep.port(),
-					ec.message().c_str()
-				);
-			return false;
+			printf(
+				"failed to open socket %s port %d: %s\n",
+				ep.address().to_string().c_str(),
+				ep.port(),
+				ec.message().c_str()
+			);
+			return;
 		}
 
 		error_code err; // ignore errors here
@@ -2206,7 +2208,7 @@ namespace aux {
 				ep.port(),
 				ec.message().c_str()
 			);
-			return false;
+			return;
 		}
 		s->external_port = s->sock->local_endpoint(ec).port();
 		last_op = listen_failed_alert::get_peer_name;
@@ -2214,13 +2216,13 @@ namespace aux {
 		{
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(ep, last_op, ec));
-				printf(
-					"cannot listen on interface %s port %d: %s\n",
-					ep.address().to_string().c_str(),
-					ep.port(),
-					ec.message().c_str()
-				);
-			return false;
+			printf(
+				"cannot listen on interface %s port %d: %s\n",
+				ep.address().to_string().c_str(),
+				ep.port(),
+				ec.message().c_str()
+			);
+			return;
 		}
 		s->sock->listen(m_settings.listen_queue_size, ec);
 		last_op = listen_failed_alert::listen;
@@ -2239,7 +2241,7 @@ namespace aux {
 					ec.message().c_str()
 				);
 			}
-		}
+		} // @TODO this condition wants review
 
 		if (m_alerts.should_post<listen_succeeded_alert>())
 			m_alerts.post_alert(listen_succeeded_alert(ep));
@@ -2249,11 +2251,9 @@ namespace aux {
 			ep.address().to_string().c_str(),
 			ep.port()
 		);
-
-		return true;
 	}
 
-	bool session_impl::open_listen_port(int flags, error_code& ec)
+	void session_impl::open_listen_port(int flags, error_code& ec)
 	{
 		TORRENT_ASSERT(is_network_thread());
 
@@ -2268,7 +2268,7 @@ namespace aux {
 		m_incoming_connection = false;
 		ec.clear();
 
-		if (m_abort) return false;
+		if (m_abort) return;
 
 #ifdef TORRENT_USE_OPENSSL
 		/* @TODO
@@ -2283,8 +2283,8 @@ namespace aux {
 		for (auto const& m_listen_interface: m_listen_interfaces) {
 
 			listen_socket_t s;
-			if (!setup_tcp_listener(&s, tcp::endpoint(m_listen_interface, m_listen_port), false, flags, ec))
-				return false;
+			setup_tcp_listener(&s, tcp::endpoint(m_listen_interface, m_listen_port), false, flags, ec);
+			if (ec) return;
 
 			if (s.sock)
 			{
@@ -2305,7 +2305,7 @@ namespace aux {
 				s.ssl = true;
 				int retries = 10;
 				if (!setup_tcp_listener(&s, ssl_interface, retries, false, flags, ec))
-					return false;
+					return;
 
 				if (s.sock)
 				{
@@ -2314,7 +2314,6 @@ namespace aux {
 				}
 			}*/
 #endif
-			return true;
 		}
 
 		// this one is harder to multibind as has no shared `setup_tcp_listener` implementation + uses single header members @TODO

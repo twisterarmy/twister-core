@@ -247,7 +247,7 @@ namespace libtorrent
 #endif
 			void main_thread();
 
-			bool open_listen_port(int flags, error_code& ec);
+			void open_listen_port(int flags, error_code& ec);
 
 			// prioritize this torrent to be allocated some connection
 			// attempts, because this torrent needs more peers.
@@ -784,7 +784,7 @@ namespace libtorrent
 			boost::shared_ptr<socket_type> m_i2p_listen_socket;
 #endif
 
-			bool setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec);
+			void setup_tcp_listener(listen_socket_t* s, tcp::endpoint ep, bool v6_only, int flags, error_code& ec);
 
 			// the proxy used for bittorrent
 			proxy_settings m_proxy;
