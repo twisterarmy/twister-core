@@ -712,12 +712,12 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
 #if TORRENT_USE_IPV6
 	else
 	{
+		m_ipv6_sock.open(udp::v6(), ec);
+		if (ec) return;
 #ifdef IPV6_V6ONLY
 		m_ipv6_sock.set_option(boost::asio::ip::v6_only(true), ec);
 		if (ec) return;
 #endif
-		m_ipv6_sock.open(udp::v6(), ec);
-		if (ec) return;
 		m_ipv6_sock.bind(ep, ec);
 		if (ec) return;
 		m_ipv6_sock.non_blocking(true, ec);
