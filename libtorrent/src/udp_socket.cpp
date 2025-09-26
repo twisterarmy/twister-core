@@ -694,12 +694,16 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
 		return;
 	}
 
-	if (m_ipv4_sock.is_open()) m_ipv4_sock.close(ec);
+	// allocate once
+	address const& a = ep.address();
+
+	// close existing connection for the current address protocol
+	if (a.is_v4() && m_ipv4_sock.is_open()) m_ipv4_sock.close(ec);
 #if TORRENT_USE_IPV6
-	if (m_ipv6_sock.is_open()) m_ipv6_sock.close(ec);
+	if (a.is_v6() && m_ipv6_sock.is_open()) m_ipv6_sock.close(ec);
 #endif
 
-	if (ep.address().is_v4())
+	if (a.is_v4())
 	{
 		m_ipv4_sock.open(udp::v4(), ec);
 		if (ec) return;

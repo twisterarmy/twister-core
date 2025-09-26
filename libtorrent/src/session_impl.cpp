@@ -2416,12 +2416,27 @@ retry:
 #endif
 		}
 
-		m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.port()), ec);
-		if (ec)
+		// Begin dual-stack UDP interface init (or bind on specified address only)
+		// which allows handling of both IPv4 and IPv6 connections
+		// https://github.com/twisterarmy/twister-core/pull/29
+
+		address const& a = m_listen_interface.address();
+
+		error_code ec_udp1;
+		error_code ec_udp2;
+
+		if (is_any(a)) {
+			m_udp_socket.bind(udp::endpoint(address_v4::any(), m_listen_interface.port()), ec_udp1);
+			m_udp_socket.bind(udp::endpoint(address_v6::any(), m_listen_interface.port()), ec_udp2);
+		} else {
+			m_udp_socket.bind(udp::endpoint(a, m_listen_interface.port()), ec_udp1);
+		}
+
+		if (ec_udp1 || ec_udp2)
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			session_log("cannot bind to UDP interface \"%s\": %s"
-				, print_endpoint(m_listen_interface).c_str(), ec.message().c_str());
+			session_log("cannot bind to UDP interface \"%s\": %s %s"
+				, print_endpoint(m_listen_interface).c_str(), ec_udp1.message().c_str(), ec_udp2.message().c_str());
 #endif
 			if (m_listen_port_retries > 0)
 			{
@@ -2430,8 +2445,14 @@ retry:
 				goto retry;
 			}
 			if (m_alerts.should_post<listen_failed_alert>())
+			{
 				m_alerts.post_alert(listen_failed_alert(m_listen_interface
-					, listen_failed_alert::bind, ec));
+					, listen_failed_alert::bind, ec_udp1));
+				m_alerts.post_alert(listen_failed_alert(m_listen_interface
+					, listen_failed_alert::bind, ec_udp2));
+			}
+			ec_udp1.clear();
+			ec_udp2.clear();
 		}
 		else
 		{
