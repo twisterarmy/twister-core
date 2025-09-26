@@ -326,7 +326,11 @@ routing_table::table_t::iterator routing_table::find_bucket(node_id const& id)
 
 bool compare_ip_cidr(node_entry const& lhs, node_entry const& rhs)
 {
-	TORRENT_ASSERT(lhs.addr().is_v4() == rhs.addr().is_v4());
+	// @TODO remove this comment after revision
+	// IPv4 assertion is deprecated by the dual-stack listener implementation:
+	// https://github.com/twisterarmy/twister-core/pull/29
+	// TORRENT_ASSERT(lhs.addr().is_v4() == rhs.addr().is_v4());
+
 	// the number of bits in the IPs that may match. If
 	// more bits that this matches, something suspicious is
 	// going on and we shouldn't add the second one to our
