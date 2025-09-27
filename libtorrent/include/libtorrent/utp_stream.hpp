@@ -236,7 +236,7 @@ public:
 	void add_write_buffer(void const* buf, size_t len);
 	void set_write_handler(handler_t h);
 	size_t read_some(bool clear_buffers);
-	
+
 	int send_delay() const;
 	int recv_delay() const;
 
@@ -266,12 +266,6 @@ public:
 	template <class Handler>
 	void async_connect(endpoint_type const& endpoint, Handler const& handler)
 	{
-		if (!endpoint.address().is_v4())
-		{
-			m_io_service.post(boost::bind<void>(handler, asio::error::operation_not_supported, 0));
-			return;
-		}
-
 		if (m_impl == 0)
 		{
 			m_io_service.post(boost::bind<void>(handler, asio::error::not_connected, 0));
@@ -281,7 +275,7 @@ public:
 		m_connect_handler = handler;
 		do_connect(endpoint, &utp_stream::on_connect);
 	}
-	
+
 	template <class Mutable_Buffers, class Handler>
 	void async_read_some(Mutable_Buffers const& buffers, Handler const& handler)
 	{
