@@ -5758,6 +5758,7 @@ retry:
 
 		boost::system::error_code ec;
 		s.external_addr_v4 = external_address().external_address(address_v4()).to_string(ec);
+		s.external_addr_v6 = external_address().external_address(address_v6()).to_string(ec);
 
 		return s;
 	}
