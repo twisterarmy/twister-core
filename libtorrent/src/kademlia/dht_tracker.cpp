@@ -114,7 +114,7 @@ namespace libtorrent { namespace dht
 	int g_announces = 0;
 	int g_failed_announces = 0;
 #endif
-		
+
 	void intrusive_ptr_add_ref(dht_tracker const* c)
 	{
 		TORRENT_ASSERT(c != 0);
@@ -204,8 +204,7 @@ namespace libtorrent { namespace dht
 	// unit and connecting them together.
 	dht_tracker::dht_tracker(libtorrent::aux::session_impl& ses, rate_limited_udp_socket& sock
 		, dht_settings const& settings, entry const* state)
-		: m_dht(&ses, this, settings, extract_node_id(state)
-			, ses.external_address().external_address(address_v4()), &ses)
+		: m_dht(&ses, this, settings, extract_node_id(state), &ses)
 		, m_sock(sock)
 		, m_last_new_key(time_now() - minutes(key_refresh))
 		, m_timer(get_io_service(sock))
@@ -231,7 +230,7 @@ namespace libtorrent { namespace dht
 		m_total_in_bytes = 0;
 		m_total_out_bytes = 0;
 		m_queries_out_bytes = 0;
-		
+
 		// turns on and off individual components' logging
 
 		rpc_log().enable(false);
@@ -342,16 +341,16 @@ namespace libtorrent { namespace dht
 			TORRENT_LOG(dht_tracker) << " *** new write key";
 #endif
 		}
-		
+
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
 		static bool first = true;
 
 		std::ofstream st("dht_routing_table_state.txt", std::ios_base::trunc);
 		m_dht.print_state(st);
-		
+
 		// count torrents
 		int torrents = m_dht.num_torrents();
-		
+
 		// count peers
 		int peers = m_dht.num_peers();
 
@@ -389,7 +388,7 @@ namespace libtorrent { namespace dht
 				<< "\t" << (m_queries_received[i] / float(tick_period))
 				<< "\t" << (m_replies_bytes_sent[i] / float(tick_period*60))
 				<< "\t" << (m_queries_bytes_received[i] / float(tick_period*60));
-		
+
 		pc << "\t" << torrents
 			<< "\t" << peers
 			<< "\t" << g_announces / float(tick_period)
@@ -536,7 +535,7 @@ namespace libtorrent { namespace dht
 
 		using libtorrent::entry;
 		using libtorrent::bdecode;
-			
+
 		TORRENT_ASSERT(size > 0);
 
 		lazy_entry e;
@@ -585,7 +584,7 @@ namespace libtorrent { namespace dht
 		write_endpoint(e.ep(), out);
 		n->list().push_back(entry(node));
 	}
-	
+
 	entry dht_tracker::state() const
 	{
 		entry ret(entry::dictionary_t);
@@ -672,7 +671,7 @@ namespace libtorrent { namespace dht
 
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
 			m_total_out_bytes += m_send_buf.size();
-		
+
 			if (e["z"].string() == "r")
 			{
 				// TODO: 2 fix this stats logging. For instance,
@@ -699,4 +698,3 @@ namespace libtorrent { namespace dht
 	}
 
 }}
-

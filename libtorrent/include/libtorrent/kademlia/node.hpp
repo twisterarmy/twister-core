@@ -91,7 +91,7 @@ struct key_desc_t
 		// has to be divisible by the number, instead
 		// of having that exact size
 		size_divisible = 8
-	}; 
+	};
 };
 
 bool TORRENT_EXTRA_EXPORT verify_message(lazy_entry const* msg, key_desc_t const desc[]
@@ -181,7 +181,7 @@ typedef std::map< std::string, std::pair<int,int> > dht_posts_by_user_t; // tota
 
 public:
 	node_impl(alert_dispatcher* alert_disp, udp_socket_interface* sock
-		, dht_settings const& settings, node_id nid, address const& external_address
+		, dht_settings const& settings, node_id nid
 		, dht_observer* observer);
 
 	virtual ~node_impl() {}
@@ -195,7 +195,7 @@ public:
 		, find_data::nodes_callback const& f);
 	void add_router_node(udp::endpoint router);
 	void load_storage(entry const* load);
-		
+
 	void unreachable(udp::endpoint const& ep);
 	void incoming(msg const& m);
 
@@ -237,7 +237,7 @@ public:
 		, udp::endpoint const& addr);
 
 	std::string generate_token(udp::endpoint const& addr, char const* info_hash);
-	
+
 	// the returned time is the delay until connection_timeout()
 	// should be called again the next time
 	time_duration connection_timeout();
@@ -278,7 +278,7 @@ protected:
 	void add_peer(std::string const& name, sha1_hash const& info_hash, address addr, int port, bool seed, int list_peers);
 
 	dht_settings const& m_settings;
-	
+
 private:
 	typedef libtorrent::mutex mutex_t;
 	mutex_t m_mutex;
@@ -288,7 +288,7 @@ private:
 	std::set<traversal_algorithm*> m_running_requests;
 
 	void incoming_request(msg const& h, entry& e);
-	bool store_dht_item(dht_storage_item &item, big_number const &target, 
+	bool store_dht_item(dht_storage_item &item, big_number const &target,
 	                    bool multi, int seq, int height, std::pair<char const*, int> &bufv);
 	void process_newly_stored_entry(const lazy_entry &p);
 
@@ -317,4 +317,3 @@ private:
 } } // namespace libtorrent::dht
 
 #endif // NODE_HPP
-

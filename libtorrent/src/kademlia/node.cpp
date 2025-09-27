@@ -116,10 +116,10 @@ void nop() {}
 
 node_impl::node_impl(alert_dispatcher* alert_disp
 	, udp_socket_interface* sock
-	, dht_settings const& settings, node_id nid, address const& external_address
+	, dht_settings const& settings, node_id nid
 	, dht_observer* observer)
 	: m_settings(settings)
-	, m_id(nid == (node_id::min)() || !verify_id(nid, external_address) ? generate_id(external_address) : nid)
+	, m_id(nid)
 	, m_table(m_id, 8, settings)
 	, m_rpc(m_id, m_table, sock, observer)
 	, m_storage_table()
@@ -151,11 +151,11 @@ bool node_impl::verify_token(std::string const& token, char const* info_hash
 	h1.update(&address[0], address.length());
 	h1.update((char*)&m_secret[0], sizeof(m_secret[0]));
 	h1.update((char*)info_hash, sha1_hash::size);
-	
+
 	sha1_hash h = h1.final();
 	if (std::equal(token.begin(), token.end(), (char*)&h[0]))
 		return true;
-		
+
 	hasher h2;
 	h2.update(&address[0], address.length());
 	h2.update((char*)&m_secret[1], sizeof(m_secret[1]));
@@ -208,7 +208,7 @@ void node_impl::bootstrap(std::vector<udp::endpoint> const& nodes
 #endif
 		r->add_entry(node_id(0), *i, observer::flag_initial);
 	}
-	
+
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
 	TORRENT_LOG(node) << "bootstrapping with " << count << " nodes";
 #endif
@@ -297,7 +297,7 @@ namespace
 			<< " nodes: " << v.size() << " ]" ;
 #endif
 
-		// create a dummy traversal_algorithm		
+		// create a dummy traversal_algorithm
 		boost::intrusive_ptr<traversal_algorithm> algo(
 			new traversal_algorithm(node, (node_id::min)()));
 
@@ -446,7 +446,7 @@ void node_impl::add_node(udp::endpoint node)
 	void* ptr = m_rpc.allocate_observer();
 	if (ptr == 0) return;
 
-	// create a dummy traversal_algorithm		
+	// create a dummy traversal_algorithm
 	// this is unfortunately necessary for the observer
 	// to free itself from the pool when it's being released
 	boost::intrusive_ptr<traversal_algorithm> algo(
@@ -516,20 +516,20 @@ void node_impl::putDataSigned(std::string const &username, std::string const &re
         boost::intrusive_ptr<dht_get> ta(new dht_get(*this, username, resource, multi,
              boost::bind(&nop),
              boost::bind(&putData_fun, _1, boost::ref(*this), p, sig_p, sig_user), true, local));
-    
+
         if( local ) {
             // store it locally so it will be automatically refreshed with the rest
             std::vector<char> pbuf;
             bencode(std::back_inserter(pbuf), p);
             std::string str_p = std::string(pbuf.data(),pbuf.size());
-    
+
             dht_storage_item item(str_p, sig_p, sig_user);
             item.local_add_time = time(NULL);
             item.confirmed = false;
             std::vector<char> vbuf;
             bencode(std::back_inserter(vbuf), p["v"]);
             std::pair<char const*, int> bufv = std::make_pair(vbuf.data(), vbuf.size());
-    
+
             int seq = (seqEntry && seqEntry->type() == entry::int_t) ? seqEntry->integer() : -1;
             int height = heightEntry->integer();
             if( store_dht_item(item, ta->target(), multi, seq, height, bufv) ) {
@@ -538,7 +538,7 @@ void node_impl::putDataSigned(std::string const &username, std::string const &re
                 //process_newly_stored_entry(p);
             }
         }
-    
+
         // now send it to the network (start transversal algorithm)
         ta->start();
     } else {
@@ -579,7 +579,7 @@ void node_impl::process_newly_stored_entry(const lazy_entry &p)
     const lazy_entry *target = p.dict_find_dict("target");
     if( !target )
         return;
-    
+
     std::string username = target->dict_find_string_value("n");
     std::string resource = target->dict_find_string_value("r");
     bool multi = (target->dict_find_string_value("t") == "m");
@@ -602,7 +602,7 @@ void node_impl::process_newly_stored_entry(const lazy_entry &p)
             }
         }
     }
-    
+
     // update posts stats
     std::string resourcePost("post");
     if( resource.compare(0, resourcePost.length(), resourcePost) == 0 ) {
@@ -642,7 +642,7 @@ bool node_impl::refresh_storage() {
 
             bool skip = false;
             bool local_and_recent = (item.local_add_time && item.local_add_time + 60*60*24*2 > time(NULL));
-            
+
             lazy_entry p;
             int pos;
             error_code err;
@@ -671,7 +671,7 @@ bool node_impl::refresh_storage() {
                 int knownPosts = userStats.first;
                 int lastPost = userStats.second;
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
-                printf("node dht: probabilistic post refresh for user: %s (total: %d last: %d cur: %d)\n", 
+                printf("node dht: probabilistic post refresh for user: %s (total: %d last: %d cur: %d)\n",
                        username.c_str(), knownPosts, lastPost, resourceNumber);
 #endif
                 if( resourceNumber < lastPost - 100 && knownPosts > 25 ) {
@@ -1176,8 +1176,6 @@ void node_impl::incoming_request(msg const& m, entry& e)
 	// its IP is
 	if (!verify_id(id, m.addr.address())) {
 		reply["ip"] = address_to_bytes(m.addr.address());
-		//[MF] enforce ID verification.
-		return;
 	}
 
 	if (strcmp(query, "ping") == 0)
@@ -1203,7 +1201,7 @@ void node_impl::incoming_request(msg const& m, entry& e)
 		}
 
 		reply["token"] = generate_token(m.addr, msg_keys[0]->string_ptr());
-		
+
 		sha1_hash info_hash(msg_keys[0]->string_ptr());
 		nodes_t n;
 		// always return nodes as well as peers
@@ -1595,11 +1593,11 @@ void node_impl::incoming_request(msg const& m, entry& e)
 	}
 }
 
-bool node_impl::store_dht_item(dht_storage_item &item, const big_number &target, 
+bool node_impl::store_dht_item(dht_storage_item &item, const big_number &target,
                                bool multi, int seq, int height, std::pair<char const*, int> &bufv)
 {
     bool stored = false;
-    
+
     item.next_refresh_time = getNextRefreshTime(item.confirmed);
     if( m_next_storage_refresh > item.next_refresh_time ) {
         m_next_storage_refresh = item.next_refresh_time;
@@ -1671,4 +1669,3 @@ bool node_impl::store_dht_item(dht_storage_item &item, const big_number &target,
 }
 
 } } // namespace libtorrent::dht
-
