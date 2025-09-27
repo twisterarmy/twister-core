@@ -81,8 +81,6 @@ traversal_algorithm::traversal_algorithm(
 // in the same DHT search under different node IDs
 bool compare_ip_cidr(observer_ptr const& lhs, observer_ptr const& rhs)
 {
-	if (lhs->target_addr().is_v4() != rhs->target_addr().is_v4())
-		return false;
 	// the number of bits in the IPs that may match. If
 	// more bits that this matches, something suspicious is
 	// going on and we shouldn't add the second one to our
@@ -459,4 +457,3 @@ void traversal_algorithm::status(dht_lookup& l)
 }
 
 } } // namespace libtorrent::dht
-
