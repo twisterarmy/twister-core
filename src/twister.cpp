@@ -39,9 +39,9 @@ twister::twister()
 #include "libtorrent/aux_/session_impl.hpp"
 
 #define DEBUG_ACCEPT_POST 1
-//#define DEBUG_EXPIRE_DHT_ITEM 1
-//#define DEBUG_MAINTAIN_DHT_NODES 1
-//#define DEBUG_NEIGHBOR_TORRENT 1
+#define DEBUG_EXPIRE_DHT_ITEM 1
+#define DEBUG_MAINTAIN_DHT_NODES 1
+#define DEBUG_NEIGHBOR_TORRENT 1
 
 using namespace libtorrent;
 static boost::shared_ptr<session> m_ses;

@@ -6334,14 +6334,18 @@ retry:
 		, int source_type, address const& source)
 	{
 #if defined TORRENT_VERBOSE_LOGGING
-		session_log(": set_external_address(%s, %d, %s)", print_address(ip).c_str()
+		session_log("  set external address: %s source_type: %d  source: %s", print_address(ip).c_str()
 			, source_type, print_address(source).c_str());
 #endif
 
-		if (!m_external_ip.cast_vote(ip, source_type, source)) return;
+		if (!m_external_ip.cast_vote(ip, source_type, source)) {
+			session_log("  can't vote for address: %s source_type: %d  source: %s", print_address(ip).c_str()
+			, source_type, print_address(source).c_str());
+			return;
+		}
 
 #if defined TORRENT_VERBOSE_LOGGING
-		session_log("  external IP updated");
+		session_log("  external IP updated to %s", print_address(ip).c_str());
 #endif
 
 		if (m_alerts.should_post<external_ip_alert>())
