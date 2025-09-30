@@ -88,6 +88,11 @@ namespace libtorrent
 		if (is_local(ip)) return false;
 		if (is_loopback(ip)) return false;
 
+		// don't trust source that aren't connected to us
+		// on a different address family than the external
+		// IP they claim we have
+		if (ip.is_v4() != source.is_v4()) return false; // * includes IPv6 comparison
+
 		// this is the key to use for the bloom filters
 		// it represents the identity of the voter
 		sha1_hash k;
