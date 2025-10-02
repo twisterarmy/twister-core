@@ -18,6 +18,7 @@ build-aux/
 *.patch
 .bitcoin
 *.log
+*.txt
 
 # http://www.gnu.org/software/automake
 
