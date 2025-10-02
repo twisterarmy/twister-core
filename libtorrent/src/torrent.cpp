@@ -2173,7 +2173,7 @@ namespace libtorrent
 
 		BOOST_FOREACH(tcp::endpoint const& p, peers) {
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-		    //debug_log("on_dht_announce_response %s:%d (local=%d)", p.address().to_string().c_str(), p.port(), p==localpeer);
+			debug_log("on_dht_announce_response %s:%d (local=%d)", p.address().to_string().c_str(), p.port(), p==localpeer);
 #endif
 		    if( p != localpeer_v4
 #if TORRENT_USE_IPV6
@@ -2203,7 +2203,7 @@ namespace libtorrent
 		if (m_trackers.empty())
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
-			//debug_log("*** announce_with_tracker: no trackers");
+			debug_log("*** announce_with_tracker: no trackers");
 #endif
 			return;
 		}
