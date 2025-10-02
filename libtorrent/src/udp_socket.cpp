@@ -707,6 +707,8 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
 #if TORRENT_USE_IPV6
 	else
 	{
+		m_ipv6_sock.open(udp::v6(), ec);
+		if (ec) return;
 #ifdef IPV6_V6ONLY
 		m_ipv6_sock.set_option(v6only(true), ec);
 		if (ec) return;
@@ -1389,4 +1391,3 @@ bool rate_limited_udp_socket::send(udp::endpoint const& ep, char const* p
 	udp_socket::send(ep, p, len, ec, flags);
 	return true;
 }
-
