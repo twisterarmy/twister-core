@@ -725,14 +725,19 @@ void ThreadMaintainDHTNodes()
             for( size_t i = 0; i < ss.dht_routing_table.size(); i++ ) {
                 dht_routing_bucket &bucket = ss.dht_routing_table[i];
                 if( bucket.num_nodes ) {
+                    address const& a = bucket.random_node.address();
 #ifdef DEBUG_MAINTAIN_DHT_NODES
                     printf("DHT bucket [%zd] random node = %s:%d\n", i,
-                           bucket.random_node.address().to_string().c_str(),
+                           a.to_string().c_str(),
                            bucket.random_node.port);
 #endif
-                    char nodeStr[64];
-                    sprintf(nodeStr,"%s:%d", bucket.random_node.address().to_string().c_str(),
-                            bucket.random_node.port - LIBTORRENT_PORT_OFFSET);
+                    char nodeStr[200];
+#if TORRENT_USE_IPV6
+                    if (a.is_v6())
+                        sprintf(nodeStr,"[%s]:%d", a.to_string().c_str(), bucket.random_node.port - LIBTORRENT_PORT_OFFSET);
+                    else
+#endif
+                        sprintf(nodeStr,"%s:%d", a.to_string().c_str(), bucket.random_node.port - LIBTORRENT_PORT_OFFSET);
                     CAddress addr;
                     ConnectNode(addr, nodeStr);
                 }
