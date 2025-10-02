@@ -711,6 +711,11 @@ void ThreadMaintainDHTNodes()
         if( nodesAdded ) {
             MilliSleep(2000);
             ss = ses->status();
+
+#ifdef DEBUG_MAINTAIN_DHT_NODES
+            printf("session nodes: %d / current nodes: %d\n", ss.dht_nodes, dht_nodes);
+#endif
+
             if( ss.dht_nodes > dht_nodes ) {
                 // new nodes were added to dht: force updating peers from dht so torrents may start faster
                 LOCK(cs_twister);

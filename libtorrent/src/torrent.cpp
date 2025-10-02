@@ -2083,10 +2083,20 @@ namespace libtorrent
 	void torrent::dht_announce()
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
-		if (!m_ses.m_dht) return;
-		if (!m_name) return;
-		if (!should_announce_dht()) return;
-
+#if defined TORRENT_VERBOSE_LOGGING
+		if (!m_ses.m_dht) {
+			printf("m_ses.m_dht disabled\n");
+			return;
+		}
+		if (!m_name) {
+			printf("m_name disabled\n");
+			return;
+		}
+		if (!should_announce_dht()) {
+			printf("not should_announce_dht\n");
+			return;
+		}
+#endif
 		//TORRENT_ASSERT(m_allow_peers);
 
 		// [MF] use m_dht->announce with myself=false to update dht tracker with peers we know.
@@ -2098,7 +2108,14 @@ namespace libtorrent
 			for (; i != end && (!pass || minPeersToAnnounce > 0); ++i) {
 				policy::peer const* p = *i;
 
-				if( !p->banned && int(p->failcount) < settings().max_failcount ) {
+				if( p->banned ) {
+#if defined TORRENT_VERBOSE_LOGGING
+					printf("peer %s:%d is banned.\n", p->address().to_string().c_str(), p->port);
+#endif
+					continue;
+				}
+
+				if( int(p->failcount) < settings().max_failcount ) {
 					bool connect_recently = !p->failcount && p->last_connected &&
 								(m_ses.session_time() - p->last_connected) < (4*3600);
 					if( p->connectable && (p->connection || connect_recently || pass) ) {
@@ -2106,8 +2123,18 @@ namespace libtorrent
 						  , p->address(), p->port, p->seed, false, m_policy.num_peers()
 						  , boost::bind(&nop));
 						minPeersToAnnounce--;
+#if defined TORRENT_VERBOSE_LOGGING
+						printf("min peers to announce: %d for %s:%d\n", minPeersToAnnounce, p->address().to_string().c_str(), p->port);
+#endif
 					}
+#if defined TORRENT_VERBOSE_LOGGING
+					else printf("peer %s:%d is not connectable (=%d | =%d | =%d | =%d)\n", p->address().to_string().c_str(), p->port, p->connectable, p->connection, connect_recently, pass);
+#endif
 				}
+
+#if defined TORRENT_VERBOSE_LOGGING
+				else printf("peer %s:%d fail count reached (%d / %d max)\n", p->address().to_string().c_str(), p->port, int(p->failcount), settings().max_failcount);
+#endif
 			}
 		}
 
@@ -2122,10 +2149,16 @@ namespace libtorrent
 		// peer exchange protocol will obtain new peers anyway.
 		if( m_allow_peers && int(m_connections.size()) < 8 ) {
 			boost::weak_ptr<torrent> self(shared_from_this());
+#if defined TORRENT_VERBOSE_LOGGING
+			printf("announce %s:%d\n", m_ses.external_address().external_address(address_v4()), port, is_seed(), port);
+#endif
 			m_ses.m_dht->announce(name(), m_torrent_file->info_hash()
 				, m_ses.external_address().external_address(address_v4()), port, is_seed(), true, m_policy.num_peers()
 				, boost::bind(&torrent::on_dht_announce_response_disp, self, _1));
 #if TORRENT_USE_IPV6
+#if defined TORRENT_VERBOSE_LOGGING
+			printf("announce [%s]:%d\n", m_ses.external_address().external_address(address_v6()), port, is_seed(), port);
+#endif
 			m_ses.m_dht->announce(name(), m_torrent_file->info_hash()
 				, m_ses.external_address().external_address(address_v6()), port, is_seed(), true, m_policy.num_peers()
 				, boost::bind(&torrent::on_dht_announce_response_disp, self, _1));
@@ -2173,7 +2206,7 @@ namespace libtorrent
 
 		BOOST_FOREACH(tcp::endpoint const& p, peers) {
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			debug_log("on_dht_announce_response %s:%d (local=%d)", p.address().to_string().c_str(), p.port(), p==localpeer);
+			debug_log("on_dht_announce_response %s:%d (local=%d)", p.address().to_string().c_str(), p.port(), p==localpeer_v4 | p==localpeer_v6);
 #endif
 		    if( p != localpeer_v4
 #if TORRENT_USE_IPV6
