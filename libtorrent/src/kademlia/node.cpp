@@ -269,14 +269,13 @@ void node_impl::incoming(msg const& m)
 		}
 		case 'e':
 		{
-#ifdef TORRENT_DHT_VERBOSE_LOGGING
 			lazy_entry const* err = m.message.dict_find_list("e");
+#ifdef TORRENT_DHT_VERBOSE_LOGGING
 			if (err && err->list_size() >= 2)
 			{
 				TORRENT_LOG(node) << "INCOMING ERROR: " << err->list_string_value_at(1);
 			}
 #endif
-			lazy_entry const* err = m.message.dict_find_list("e");
 			if (err && err->list_size() >= 2)
 			{
 				printf("INCOMING ERROR: %s\n", err->list_string_value_at(1).c_str());
@@ -373,8 +372,9 @@ namespace
              entry const &p, std::string const &sig_p, std::string const &sig_user)
 	{
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
-		TORRENT_LOG(node) << "sending putData [ username: " << username
-			<< " res: " << resource
+		//TORRENT_LOG(node) << "sending putData [ username: " << username
+		TORRENT_LOG(node) << "sending putData ["
+			//<< " res: " << resource
 			<< " nodes: " << v.size() << " ]" ;
 #endif
 
@@ -387,7 +387,7 @@ namespace
 			, end(v.end()); i != end; ++i)
 		{
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
-			TORRENT_LOG(node) << "  putData-distance: " << (160 - distance_exp(ih, i->first.id));
+			TORRENT_LOG(node) << "  putData-distance: ";// << (160 - distance_exp(ih, i->first.id));
 #endif
 
 			void* ptr = node.m_rpc.allocate_observer();
@@ -552,7 +552,7 @@ void node_impl::getData(std::string const &username, std::string const &resource
 			boost::function<void(bool, bool)> fdone, bool local)
 {
 #ifdef TORRENT_DHT_VERBOSE_LOGGING
-	TORRENT_LOG(node) << "getData [ username: " << info_hash << " res: " << resource << " ]" ;
+	TORRENT_LOG(node) << "getData [ username: " << username << " res: " << resource << " ]" ;
 #endif
 	// search for nodes with ids close to id or with peers
 	// for info-hash id. callback is used to return data.
@@ -1671,4 +1671,3 @@ bool node_impl::store_dht_item(dht_storage_item &item, const big_number &target,
 }
 
 } } // namespace libtorrent::dht
-
