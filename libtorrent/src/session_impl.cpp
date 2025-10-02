@@ -6339,8 +6339,10 @@ retry:
 #endif
 
 		if (!m_external_ip.cast_vote(ip, source_type, source)) {
+#if defined TORRENT_VERBOSE_LOGGING
 			session_log("  can't vote for address: %s source_type: %d  source: %s", print_address(ip).c_str()
 			, source_type, print_address(source).c_str());
+#endif
 			return;
 		}
 
