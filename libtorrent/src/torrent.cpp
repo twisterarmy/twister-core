@@ -2150,14 +2150,14 @@ namespace libtorrent
 		if( m_allow_peers && int(m_connections.size()) < 8 ) {
 			boost::weak_ptr<torrent> self(shared_from_this());
 #if defined TORRENT_VERBOSE_LOGGING
-			printf("announce %s:%d\n", m_ses.external_address().external_address(address_v4()), port, is_seed(), port);
+			printf("announce %s:%d\n", m_ses.external_address().external_address(address_v4()).to_string().c_str(), port, is_seed(), port);
 #endif
 			m_ses.m_dht->announce(name(), m_torrent_file->info_hash()
 				, m_ses.external_address().external_address(address_v4()), port, is_seed(), true, m_policy.num_peers()
 				, boost::bind(&torrent::on_dht_announce_response_disp, self, _1));
 #if TORRENT_USE_IPV6
 #if defined TORRENT_VERBOSE_LOGGING
-			printf("announce [%s]:%d\n", m_ses.external_address().external_address(address_v6()), port, is_seed(), port);
+			printf("announce [%s]:%d\n", m_ses.external_address().external_address(address_v6()).to_string().c_str(), port, is_seed(), port);
 #endif
 			m_ses.m_dht->announce(name(), m_torrent_file->info_hash()
 				, m_ses.external_address().external_address(address_v6()), port, is_seed(), true, m_policy.num_peers()
