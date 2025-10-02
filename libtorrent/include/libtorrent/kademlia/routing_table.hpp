@@ -218,9 +218,8 @@ private:
 
 	// these are all the IPs that are in the routing
 	// table. It's used to only allow a single entry
-	// per IP in the whole table. Currently only for
-	// IPv4
-	std::set<address_v4::bytes_type> m_ips;
+	// per IP in the whole table.
+	std::set<address> m_addresses;
 };
 
 } } // namespace libtorrent::dht
