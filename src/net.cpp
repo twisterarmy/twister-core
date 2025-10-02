@@ -473,13 +473,16 @@ CNode* FindNode(const CService& addr)
 CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 {
     if (pszDest == NULL) {
-        if (IsLocal(addrConnect))
+        if (IsLocal(addrConnect)) {
+            printf("skip local address %s\n", addrConnect.ToString().c_str());
             return NULL;
+        }
 
         // Look for an existing connection
         CNode* pnode = FindNode((CService)addrConnect);
         if (pnode)
         {
+            printf("return existing connection %s\n", addrConnect.ToString().c_str());
             pnode->AddRef();
             return pnode;
         }
@@ -487,9 +490,9 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 
 
     /// debug print
-//    printf("trying connection %s lastseen=%.1fhrs\n",
-//        pszDest ? pszDest : addrConnect.ToString().c_str(),
-//        pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
+    printf("trying connection %s lastseen=%.1fhrs\n",
+        pszDest ? pszDest : addrConnect.ToString().c_str(),
+        pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
     // Connect
     SOCKET hSocket;
@@ -1228,7 +1231,7 @@ void _ThreadDNSAddressSeed(const char *strDNS)
                     vAdd.push_back(addr);
                     found++;
                 }
-                
+
                 // non std ports hack: see twister-seeder
                 string nonStdHost = "nonstd." + seed.host;
                 if (LookupHost(nonStdHost.c_str(), vIPs))
@@ -1236,7 +1239,7 @@ void _ThreadDNSAddressSeed(const char *strDNS)
                     BOOST_FOREACH(CNetAddr& ip, vIPs)
                     {
                         unsigned short crcAddr = ip.crc16();
-                        
+
                         BOOST_FOREACH(CNetAddr& ipPort, vIPs)
                         {
                             if( ipPort.GetByte(3) == (crcAddr >> 8) &&
