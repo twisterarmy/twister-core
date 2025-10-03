@@ -266,11 +266,12 @@ public:
 	template <class Handler>
 	void async_connect(endpoint_type const& endpoint, Handler const& handler)
 	{
+		/* @TODO
 		if (!endpoint.address().is_v4())
 		{
 			m_io_service.post(boost::bind<void>(handler, asio::error::operation_not_supported, 0));
 			return;
-		}
+		}*/
 
 		if (m_impl == 0)
 		{
