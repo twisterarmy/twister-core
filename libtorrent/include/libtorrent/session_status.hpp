@@ -206,8 +206,7 @@ namespace libtorrent
 		int peerlist_size;
 
 		// external ip address
-		std::string external_addr_v4;
-		std::string external_addr_v6;
+		std::string external_addr;
 	};
 
 }

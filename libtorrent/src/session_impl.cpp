@@ -48,9 +48,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/bind.hpp>
 #include <boost/function_equal.hpp>
 //#if TORRENT_USE_IPV6
-	#ifdef IPV6_V6ONLY
-		#include <boost/asio/ip/v6_only.hpp>
-	#endif
+#ifdef IPV6_V6ONLY
+#include <boost/asio/ip/v6_only.hpp>
+#endif
 //#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -2416,27 +2416,12 @@ retry:
 #endif
 		}
 
-		// Begin dual-stack UDP interface init (or bind on specified address only)
-		// which allows handling of both IPv4 and IPv6 connections
-		// https://github.com/twisterarmy/twister-core/pull/29
-
-		address const& a = m_listen_interface.address();
-
-		error_code ec_udp1;
-		error_code ec_udp2;
-
-		if (is_any(a)) {
-			m_udp_socket.bind(udp::endpoint(address_v4::any(), m_listen_interface.port()), ec_udp1);
-			m_udp_socket.bind(udp::endpoint(address_v6::any(), m_listen_interface.port()), ec_udp2);
-		} else {
-			m_udp_socket.bind(udp::endpoint(a, m_listen_interface.port()), ec_udp1);
-		}
-
-		if (ec_udp1 || ec_udp2)
+		m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.port()), ec);
+		if (ec)
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			session_log("cannot bind to UDP interface \"%s\": %s %s"
-				, print_endpoint(m_listen_interface).c_str(), ec_udp1.message().c_str(), ec_udp2.message().c_str());
+			session_log("cannot bind to UDP interface \"%s\": %s"
+				, print_endpoint(m_listen_interface).c_str(), ec.message().c_str());
 #endif
 			if (m_listen_port_retries > 0)
 			{
@@ -2445,14 +2430,8 @@ retry:
 				goto retry;
 			}
 			if (m_alerts.should_post<listen_failed_alert>())
-			{
 				m_alerts.post_alert(listen_failed_alert(m_listen_interface
-					, listen_failed_alert::bind, ec_udp1));
-				m_alerts.post_alert(listen_failed_alert(m_listen_interface
-					, listen_failed_alert::bind, ec_udp2));
-			}
-			ec_udp1.clear();
-			ec_udp2.clear();
+					, listen_failed_alert::bind, ec));
 		}
 		else
 		{
@@ -5757,8 +5736,7 @@ retry:
 		s.peerlist_size = peerlist_size;
 
 		boost::system::error_code ec;
-		s.external_addr_v4 = external_address().external_address(address_v4()).to_string(ec);
-		s.external_addr_v6 = external_address().external_address(address_v6()).to_string(ec);
+		s.external_addr = external_address().external_address(address()).to_string(ec);
 
 		return s;
 	}
@@ -6334,20 +6312,14 @@ retry:
 		, int source_type, address const& source)
 	{
 #if defined TORRENT_VERBOSE_LOGGING
-		session_log("  set external address: %s source_type: %d  source: %s", print_address(ip).c_str()
+		session_log(": set_external_address(%s, %d, %s)", print_address(ip).c_str()
 			, source_type, print_address(source).c_str());
 #endif
 
-		if (!m_external_ip.cast_vote(ip, source_type, source)) {
-#if defined TORRENT_VERBOSE_LOGGING
-			session_log("  can't vote for address: %s source_type: %d  source: %s", print_address(ip).c_str()
-			, source_type, print_address(source).c_str());
-#endif
-			return;
-		}
+		if (!m_external_ip.cast_vote(ip, source_type, source)) return;
 
 #if defined TORRENT_VERBOSE_LOGGING
-		session_log("  external IP updated to %s", print_address(ip).c_str());
+		session_log("  external IP updated");
 #endif
 
 		if (m_alerts.should_post<external_ip_alert>())

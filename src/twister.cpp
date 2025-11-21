@@ -3919,11 +3919,12 @@ Object getLibtorrentSessionStatus()
         session_status stats = ses->status();
 
         Array ext_addr_net;
-              ext_addr_net.push_back(stats.external_addr_v4);
-              ext_addr_net.push_back(stats.external_addr_v6);
+              // @TODO vector
+              //ext_addr_net.push_back(stats.external_addr_v4);
+              //ext_addr_net.push_back(stats.external_addr_v6);
 
         obj.push_back( Pair("ext_addr_net", ext_addr_net) );
-        obj.push_back( Pair("ext_addr_net2", stats.external_addr_v4) ); // @TODO deprecated
+        obj.push_back( Pair("ext_addr_net2", stats.external_addr) ); // @TODO deprecated
 
         obj.push_back( Pair("dht_torrents", stats.dht_torrents) );
         obj.push_back( Pair("num_peers", stats.num_peers) );
