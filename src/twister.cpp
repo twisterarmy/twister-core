@@ -351,10 +351,15 @@ void ThreadWaitExtIP()
                     MilliSleep(500);
                 }
             }
-            printf("use `%s` as the external address for `%s`\n", external.to_string().c_str(),
-                                                                  bind_ip.c_str());
-
-            dht_session_addresses.push_back(dht_session_address(bind, external));
+            if (external.is_unspecified() || external.is_v4() != bind.is_v4()) 
+                printf(
+                    "external address `%s` is unspecified or its address family mismatch with the bind address `%s`; binding skipped.\n", 
+                    external.to_string().c_str(), bind_ip.c_str());
+            else 
+            {
+                printf("use `%s` as the external address for `%s`\n", external.to_string().c_str(), bind_ip.c_str());
+                dht_session_addresses.push_back(dht_session_address(bind, external));
+            }
         }
     }
 
