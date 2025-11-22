@@ -303,6 +303,60 @@ data_error:
 
 void ThreadWaitExtIP()
 {
+    libtorrent::error_code ec; // libtorrent::error_code == boost::system::error_code
+
+    // Respect bitcoin-core bind address API for DHT services (#254)
+    std::set<dht_session_address> dht_session_addresses;
+    {
+        std::set<address> binds;
+        if (mapArgs.count("-bind"))
+        {
+            for (const auto& b : mapMultiArgs["-bind"])
+            {
+                address a = address::from_string(b, ec);
+                if (ec)
+                    printf("failed to listen `%s`: `%s`\n", b.c_str(), ec.message().c_str());
+                else
+                    binds.insert(a);
+            }
+        }
+        // Custom binding is not set, use default IPv4/IPv6 stack for the DHT
+        if (binds.empty()) {
+            binds.insert(address_v4::any());
+            binds.insert(address_v6::any());
+        }
+        // Detect external IP
+        for (const auto& b : binds)
+        {
+            // use bind address as public until resolve
+            address p = b;
+            // wait up to 10 seconds for bitcoin to get the external IP
+            for ( int i = 0; i < 20; i++ )
+            {
+                const CNetAddr paddrPeer("8.8.8.8"); // @TODO legacy, maybe IPv4 only!
+                CAddress a( GetLocalAddress(&paddrPeer) );
+                if (a.IsValid())
+                {
+                    p = address::from_string(a.ToStringIP(), ec);
+                    if (ec) printf("failed to resolve public address `%s` for `%s`: `%s`\n", a.ToStringIP().c_str(),
+                                                                                             b.to_string().c_str(),
+                                                                                             ec.message().c_str());
+                    else // resolved.
+                    {
+                        printf("use `%s` as the public address for `%s`\n", p.to_string().c_str(),
+                                                                            b.to_string().c_str());
+                        break;
+                    }
+                }
+                MilliSleep(500);
+            }
+            dht_session_addresses.insert(dht_session_address(b, p));
+        }
+    }
+
+
+
+    // original impl goes here.. @TODO
     SimpleThreadCounter threadCounter(&cs_twister, &m_threadsToJoin, "wait-extip");
 
     std::string ipStr;
@@ -317,7 +371,6 @@ void ThreadWaitExtIP()
         MilliSleep(500);
     }
 
-    libtorrent::error_code ec; // libtorrent::error_code == boost::system::error_code
 
     boost::filesystem::path swarmDbPath = GetDataDir() / "swarm" / "db";
     boost::filesystem::create_directories(swarmDbPath, ec);
@@ -327,22 +380,7 @@ void ThreadWaitExtIP()
     m_swarmDb.reset(new CLevelDB(swarmDbPath.string(), 256*1024, false, false));
 
     int listen_port = GetListenPort() + LIBTORRENT_PORT_OFFSET;
-    std::string bind_to_interface = "";
-    if (mapArgs.count("-bind")) { // respect bind address and family for DHT services (#254)
-        BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
-            CService addrBind;
-            // the binding address should be valid at this point, as checked in the `init.cpp` step,
-            // just let's ensure this by adding an additional `Lookup` validation
-            if (IsBindValid(strBind))
-                if (Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
-                    bind_to_interface = strBind.c_str();
-                else printf("Cannot resolve -bind address: '%s', using default interface.", strBind.c_str());
-            else printf("The -bind address format '%s' is invalid!", strBind.c_str());
-            // we are using only the first value (if there are multiple `-bind` options),
-            // the application behavior may require a separate option for these needs @TODO
-            break;
-        }
-    }
+
     proxyType proxyInfoOut;
     m_usingProxy = GetProxy(NET_IPV4, proxyInfoOut);
 

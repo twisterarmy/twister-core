@@ -4,6 +4,7 @@
 #include "util.h"
 #include "key.h"
 #include <boost/thread.hpp>
+#include <boost/asio/ip/address.hpp>
 #include "json/json_spirit.h"
 
 #define LIBTORRENT_PORT_OFFSET 1000
@@ -23,6 +24,17 @@
 namespace libtorrent {
     class entry;
 }
+
+struct dht_session_address
+{
+    boost::asio::ip::address bind;
+    boost::asio::ip::address external;
+    dht_session_address(
+        boost::asio::ip::address bind,
+        boost::asio::ip::address external
+    ) : bind(bind),
+        external(external) {}
+};
 
 class twister
 {
