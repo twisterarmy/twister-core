@@ -327,30 +327,34 @@ void ThreadWaitExtIP()
             binds.insert(address_v6::any());
         }
         // Detect external IP
-        for (const auto& b : binds)
+        for (const auto& bind : binds)
         {
-            address p = b; // use bind address as public until resolve
-            if (b.is_unspecified())
+            address external = bind; // use bind address as external (by default)
+
+            const std::string bind_ip = bind.to_string(); // allocate once
+            if (bind.is_unspecified())
             {
                 // wait up to 10 seconds for bitcoin to get the external IP
                 for ( int i = 0; i < 20; i++ )
                 {
-                    CAddress a( GetLocalAddress() ); // @TODO untested
+                    const CNetAddr paddrPeer(bind_ip.c_str());
+                    CAddress a( GetLocalAddress(&paddrPeer) ); // @TODO init with external ip
                     if (a.IsValid())
                     {
-                        p = address::from_string(a.ToStringIP(), ec);
-                        if (ec) printf("failed to resolve public address `%s` for `%s`: `%s`\n", a.ToStringIP().c_str(),
-                                                                                                 b.to_string().c_str(),
-                                                                                                 ec.message().c_str());
+                        const std::string external_ip = a.ToStringIP();
+                        external = address::from_string(external_ip, ec);
+                        if (ec) printf("failed to resolve external address `%s` for `%s`: `%s`\n", external_ip.c_str(),
+                                                                                                   bind_ip.c_str(),
+                                                                                                   ec.message().c_str());
                         else break; // resolved.
                     }
                     MilliSleep(500);
                 }
             }
-            printf("use `%s` as the public address for `%s`\n", p.to_string().c_str(),
-                                                                b.to_string().c_str());
+            printf("use `%s` as the external address for `%s`\n", external.to_string().c_str(),
+                                                                  bind_ip.c_str());
 
-            dht_session_addresses.push_back(dht_session_address(b, p));
+            dht_session_addresses.push_back(dht_session_address(bind, external));
         }
     }
 
