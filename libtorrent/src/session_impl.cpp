@@ -2412,26 +2412,12 @@ retry:
 #endif
 		}
 
-		// todo: wants refactor
-		// begin dual-stack UDP interface init (or bind on specified address only)
-		// which allows handling of both IPv4 and IPv6 connections
-		address const& a = m_listen_interface.address();
-
-		error_code ec_udp;
-		error_code ec_udp_v4;
-		error_code ec_udp_v6;
-
-		if (is_any(a)) {
-			m_udp_socket.bind(udp::endpoint(address_v4::any(), m_listen_interface.port()), ec_udp_v4);
-			m_udp_socket.bind(udp::endpoint(address_v6::any(), m_listen_interface.port()), ec_udp_v6);
-		} else
-			m_udp_socket.bind(udp::endpoint(a, m_listen_interface.port()), ec_udp);
-
-		if (ec_udp_v4 || ec_udp_v6 || ec_udp)
+		m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.port()), ec);
+		if (ec)
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			session_log("cannot bind to UDP interface \"%s\": %s | %s | %s"
-				, print_endpoint(m_listen_interface).c_str(), ec_udp_v4.message().c_str(), ec_udp_v6.message().c_str(), ec_udp.message().c_str());
+			session_log("cannot bind to UDP interface \"%s\": %s"
+				, print_endpoint(m_listen_interface).c_str(), ec.message().c_str());
 #endif
 			if (m_listen_port_retries > 0)
 			{
@@ -2439,18 +2425,9 @@ retry:
 				--m_listen_port_retries;
 				goto retry;
 			}
-			if (m_alerts.should_post<listen_failed_alert>()) {
-				if (ec_udp)
-					m_alerts.post_alert(listen_failed_alert(m_listen_interface
-						, listen_failed_alert::bind, ec_udp));
-				if (ec_udp_v4)
-					m_alerts.post_alert(listen_failed_alert(m_listen_interface
-						, listen_failed_alert::bind, ec_udp_v4));
-				if (ec_udp_v6)
-					m_alerts.post_alert(listen_failed_alert(m_listen_interface
-						, listen_failed_alert::bind, ec_udp_v6));
-			}
-
+			if (m_alerts.should_post<listen_failed_alert>())
+				m_alerts.post_alert(listen_failed_alert(m_listen_interface
+					, listen_failed_alert::bind, ec));
 		}
 		else
 		{
@@ -2463,9 +2440,7 @@ retry:
 #if defined TORRENT_VERBOSE_LOGGING
 		(*m_logger) << ">>> SET_TOS[ udp_socket tos: " << m_settings.peer_tos << " e: " << ec.message() << " ]\n";
 #endif
-		ec_udp.clear();
-		ec_udp_v4.clear();
-		ec_udp_v6.clear();
+		ec.clear();
 
 		// initiate accepting on the listen sockets
 		for (std::list<listen_socket_t>::iterator i = m_listen_sockets.begin()
