@@ -328,28 +328,28 @@ void ThreadWaitExtIP()
         // Detect external IP
         for (const auto& b : binds)
         {
-            // use bind address as public until resolve
-            address p = b;
-            // wait up to 10 seconds for bitcoin to get the external IP
-            for ( int i = 0; i < 20; i++ )
+            address p = b; // use bind address as public until resolve
+            if (b.is_unspecified())
             {
-                const CNetAddr paddrPeer("8.8.8.8"); // @TODO legacy, maybe IPv4 only!
-                CAddress a( GetLocalAddress(&paddrPeer) );
-                if (a.IsValid())
+                // wait up to 10 seconds for bitcoin to get the external IP
+                for ( int i = 0; i < 20; i++ )
                 {
-                    p = address::from_string(a.ToStringIP(), ec);
-                    if (ec) printf("failed to resolve public address `%s` for `%s`: `%s`\n", a.ToStringIP().c_str(),
-                                                                                             b.to_string().c_str(),
-                                                                                             ec.message().c_str());
-                    else // resolved.
+                    const CNetAddr paddrPeer("8.8.8.8"); // @TODO legacy, maybe IPv4 only!
+                    CAddress a( GetLocalAddress(&paddrPeer) );
+                    if (a.IsValid())
                     {
-                        printf("use `%s` as the public address for `%s`\n", p.to_string().c_str(),
-                                                                            b.to_string().c_str());
-                        break;
+                        p = address::from_string(a.ToStringIP(), ec);
+                        if (ec) printf("failed to resolve public address `%s` for `%s`: `%s`\n", a.ToStringIP().c_str(),
+                                                                                                 b.to_string().c_str(),
+                                                                                                 ec.message().c_str());
+                        else break; // resolved.
                     }
+                    MilliSleep(500);
                 }
-                MilliSleep(500);
             }
+            printf("use `%s` as the public address for `%s`\n", p.to_string().c_str(),
+                                                                b.to_string().c_str());
+
             dht_session_addresses.insert(dht_session_address(b, p));
         }
     }
