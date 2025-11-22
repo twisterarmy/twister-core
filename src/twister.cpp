@@ -305,8 +305,8 @@ void ThreadWaitExtIP()
 {
     libtorrent::error_code ec; // libtorrent::error_code == boost::system::error_code
 
-    // Respect bitcoin-core bind address API for DHT services (#254)
-    std::set<dht_session_address> dht_session_addresses;
+    // Respect bitcoin-core `-bind` address API for DHT (#254)
+    std::vector<dht_session_address> dht_session_addresses;
     {
         std::set<address> binds;
         if (mapArgs.count("-bind"))
@@ -334,8 +334,7 @@ void ThreadWaitExtIP()
                 // wait up to 10 seconds for bitcoin to get the external IP
                 for ( int i = 0; i < 20; i++ )
                 {
-                    const CNetAddr paddrPeer("8.8.8.8"); // @TODO legacy, maybe IPv4 only!
-                    CAddress a( GetLocalAddress(&paddrPeer) );
+                    CAddress a( GetLocalAddress() ); // @TODO untested
                     if (a.IsValid())
                     {
                         p = address::from_string(a.ToStringIP(), ec);
@@ -350,13 +349,17 @@ void ThreadWaitExtIP()
             printf("use `%s` as the public address for `%s`\n", p.to_string().c_str(),
                                                                 b.to_string().c_str());
 
-            dht_session_addresses.insert(dht_session_address(b, p));
+            dht_session_addresses.push_back(dht_session_address(b, p));
         }
     }
 
 
+    // @TODO
+    std::string bind_to_interface = dht_session_addresses[0].bind.to_string();
+    // original impl goes here..
+    // at this point, implement multi-stack DHT
+    // * it may require async *m_swarmDb handler
 
-    // original impl goes here.. @TODO
     SimpleThreadCounter threadCounter(&cs_twister, &m_threadsToJoin, "wait-extip");
 
     std::string ipStr;
