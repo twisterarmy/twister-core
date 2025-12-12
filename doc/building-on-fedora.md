@@ -18,7 +18,6 @@ Tested on:
 2. `echo -e "rpcuser=user\nrpcpassword=pwd" > ~/.twister/twister.conf`
 3. `chmod 600 ~/.twister/twister.conf`
 4. `git clone https://github.com/twisterarmy/twister-html.git ~/.twister/html`
-5. `cd ~/.twister/html`
 
 ## Start
 
