@@ -691,7 +691,7 @@ bool CNetAddr::IsTor() const
 // https://yggdrasil-network.github.io/2018/07/28/addressing.html#addressing-in-yggdrasil
 bool CNetAddr::IsYggdrasil() const
 {
-    return IsIPv6() && (ip[0] & 0xFE) == 0x02; // @TODO wants revision
+    return IsIPv6() && (ip[0] == 0x02 || ip[0] == 0x03);
 }
 
 bool CNetAddr::IsLocal() const
