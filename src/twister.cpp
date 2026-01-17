@@ -39,9 +39,9 @@ twister::twister()
 #include "libtorrent/aux_/session_impl.hpp"
 
 #define DEBUG_ACCEPT_POST 1
-//#define DEBUG_EXPIRE_DHT_ITEM 1
-//#define DEBUG_MAINTAIN_DHT_NODES 1
-//#define DEBUG_NEIGHBOR_TORRENT 1
+#define DEBUG_EXPIRE_DHT_ITEM 1
+#define DEBUG_MAINTAIN_DHT_NODES 1
+#define DEBUG_NEIGHBOR_TORRENT 1
 
 using namespace libtorrent;
 static boost::shared_ptr<session> m_ses;
@@ -304,20 +304,71 @@ data_error:
 void ThreadWaitExtIP()
 {
     SimpleThreadCounter threadCounter(&cs_twister, &m_threadsToJoin, "wait-extip");
+    libtorrent::error_code ec; // libtorrent::error_code == boost::system::error_code
 
-    std::string ipStr;
-    // wait up to 10 seconds for bitcoin to get the external IP
-    for( int i = 0; i < 20; i++ ) {
-        const CNetAddr paddrPeer("8.8.8.8");
-        CAddress addr( GetLocalAddress(&paddrPeer) );
-        if( addr.IsValid() ) {
-            ipStr = addr.ToStringIP();
-            break;
+    // Respect bitcoin-core `-bind` address API for DHT (#254)
+    std::vector<dht_session_address> dht_session_addresses;
+    {
+        std::set<address> binds;
+        if (mapArgs.count("-bind"))
+        {
+            for (const auto& b : mapMultiArgs["-bind"])
+            {
+                address a = address::from_string(b, ec);
+                if (ec)
+                    printf("failed to listen `%s`: `%s`\n", b.c_str(), ec.message().c_str());
+                else
+                    binds.insert(a);
+            }
         }
-        MilliSleep(500);
+        // Custom binding is not set, use default IPv4/IPv6 stack for the DHT
+        if (binds.empty()) {
+            binds.insert(address_v4::any());
+            binds.insert(address_v6::any());
+        }
+        // Detect external IP
+        for (const auto& bind : binds)
+        {
+            address external = bind; // use bind address as external (by default)
+
+            const std::string bind_ip = bind.to_string(); // allocate once
+            if (bind.is_unspecified())
+            {
+                // wait up to 10 seconds for bitcoin to get the external IP
+                for ( int i = 0; i < 20; i++ )
+                {
+                    const CNetAddr paddrPeer(bind_ip.c_str());
+                    CAddress a( GetLocalAddress(&paddrPeer) ); // @TODO init with external ip
+                    if (a.IsValid())
+                    {
+                        const std::string external_ip = a.ToStringIP();
+                        external = address::from_string(external_ip, ec);
+                        if (ec) printf("failed to resolve external address `%s` for `%s`: `%s`\n", external_ip.c_str(),
+                                                                                                   bind_ip.c_str(),
+                                                                                                   ec.message().c_str());
+                        else break; // resolved.
+                    }
+                    MilliSleep(500);
+                }
+            }
+            if (external.is_unspecified() || external.is_v4() != bind.is_v4()) 
+                printf(
+                    "external address `%s` is unspecified or its address family mismatch with the bind address `%s`; binding skipped.\n", 
+                    external.to_string().c_str(), bind_ip.c_str());
+            else 
+            {
+                printf("use `%s` as the external address for `%s`\n", external.to_string().c_str(), bind_ip.c_str());
+                dht_session_addresses.push_back(dht_session_address(bind, external));
+            }
+        }
     }
 
-    libtorrent::error_code ec; // libtorrent::error_code == boost::system::error_code
+    // @TODO
+    std::string bind_to_interface = dht_session_addresses[0].bind.to_string();
+    std::string ipStr = dht_session_addresses[0].external.to_string();
+    // original impl goes here..
+    // at this point, implement multi-stack DHT
+    // * it may require async *m_swarmDb handler
 
     boost::filesystem::path swarmDbPath = GetDataDir() / "swarm" / "db";
     boost::filesystem::create_directories(swarmDbPath, ec);
@@ -327,22 +378,7 @@ void ThreadWaitExtIP()
     m_swarmDb.reset(new CLevelDB(swarmDbPath.string(), 256*1024, false, false));
 
     int listen_port = GetListenPort() + LIBTORRENT_PORT_OFFSET;
-    std::string bind_to_interface = "";
-    if (mapArgs.count("-bind")) { // respect bind address and family for DHT services (#254)
-        BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
-            CService addrBind;
-            // the binding address should be valid at this point, as checked in the `init.cpp` step,
-            // just let's ensure this by adding an additional `Lookup` validation
-            if (IsBindValid(strBind))
-                if (Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
-                    bind_to_interface = strBind.c_str();
-                else printf("Cannot resolve -bind address: '%s', using default interface.", strBind.c_str());
-            else printf("The -bind address format '%s' is invalid!", strBind.c_str());
-            // we are using only the first value (if there are multiple `-bind` options),
-            // the application behavior may require a separate option for these needs @TODO
-            break;
-        }
-    }
+
     proxyType proxyInfoOut;
     m_usingProxy = GetProxy(NET_IPV4, proxyInfoOut);
 
@@ -725,14 +761,19 @@ void ThreadMaintainDHTNodes()
             for( size_t i = 0; i < ss.dht_routing_table.size(); i++ ) {
                 dht_routing_bucket &bucket = ss.dht_routing_table[i];
                 if( bucket.num_nodes ) {
+                    address const& a = bucket.random_node.address();
 #ifdef DEBUG_MAINTAIN_DHT_NODES
                     printf("DHT bucket [%zd] random node = %s:%d\n", i,
-                           bucket.random_node.address().to_string().c_str(),
+                           a.to_string().c_str(),
                            bucket.random_node.port);
 #endif
-                    char nodeStr[64];
-                    sprintf(nodeStr,"%s:%d", bucket.random_node.address().to_string().c_str(),
-                            bucket.random_node.port - LIBTORRENT_PORT_OFFSET);
+                    char nodeStr[200];
+#if TORRENT_USE_IPV6
+                    if (a.is_v6())
+                        sprintf(nodeStr,"[%s]:%d", a.to_string().c_str(), bucket.random_node.port - LIBTORRENT_PORT_OFFSET);
+                    else
+#endif
+                        sprintf(nodeStr,"%s:%d", a.to_string().c_str(), bucket.random_node.port - LIBTORRENT_PORT_OFFSET);
                     CAddress addr;
                     ConnectNode(addr, nodeStr);
                 }

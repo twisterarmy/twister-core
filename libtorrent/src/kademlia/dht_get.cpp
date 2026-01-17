@@ -96,7 +96,7 @@ void dht_get_observer::reply(msg const& m)
 			<< " addr: " << m.addr
 			<< " id: " << node_id(id->string_ptr())
 			<< " distance: " << distance_exp(m_algorithm->target(), node_id(id->string_ptr()))
-			<< " p: " << ((end - peers) / 6);
+			;//<< " p: " << ((end - peers) / 6);
 #endif
 		entry::list_type values_list;
 		for (int i = 0; i < n->list_size(); ++i)
@@ -317,4 +317,3 @@ void dht_get::done()
 }
 
 } } // namespace libtorrent::dht
-

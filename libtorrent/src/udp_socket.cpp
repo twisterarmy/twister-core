@@ -689,12 +689,15 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
 		return;
 	}
 
-	if (m_ipv4_sock.is_open()) m_ipv4_sock.close(ec);
+	// may bind twice, apply for the relevant address type only
+	// 943e2c8a97ab0aa7c461048360dba40bd0d5191f
+	address const& a = ep.address();
+	if (a.is_v4() && m_ipv4_sock.is_open()) m_ipv4_sock.close(ec);
 #if TORRENT_USE_IPV6
-	if (m_ipv6_sock.is_open()) m_ipv6_sock.close(ec);
+	if (a.is_v6() && m_ipv6_sock.is_open()) m_ipv6_sock.close(ec);
 #endif
 
-	if (ep.address().is_v4())
+	if (a.is_v4())
 	{
 		m_ipv4_sock.open(udp::v4(), ec);
 		if (ec) return;
@@ -707,6 +710,8 @@ void udp_socket::bind(udp::endpoint const& ep, error_code& ec)
 #if TORRENT_USE_IPV6
 	else
 	{
+		m_ipv6_sock.open(udp::v6(), ec);
+		if (ec) return;
 #ifdef IPV6_V6ONLY
 		m_ipv6_sock.set_option(v6only(true), ec);
 		if (ec) return;
@@ -1389,4 +1394,3 @@ bool rate_limited_udp_socket::send(udp::endpoint const& ep, char const* p
 	udp_socket::send(ep, p, len, ec, flags);
 	return true;
 }
-
